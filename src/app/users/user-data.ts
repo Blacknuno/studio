@@ -216,7 +216,7 @@ export const mockUsers: User[] = [
     kernelProfile: 'Xray-core VLESS',
     protocol: 'vless',
     dataAllowanceGB: 200,
-    dataUsedGB: 196, // Test yellow bar
+    dataUsedGB: 196, 
     maxConcurrentIPs: 5,
     validityPeriodDays: 365,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -232,7 +232,7 @@ export const mockUsers: User[] = [
     kernelProfile: 'Sing-box Hysteria',
     protocol: 'hysteria2',
     dataAllowanceGB: 20,
-    dataUsedGB: 19.5, // Test red bar
+    dataUsedGB: 19.5,
     maxConcurrentIPs: 2,
     validityPeriodDays: 15,
     createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
@@ -268,6 +268,9 @@ export type PanelSettingsData = {
   telegramBotToken: string;
   telegramAdminChatId: string;
   isTelegramBotConnected: boolean;
+  domainName: string;
+  sslPrivateKey: string;
+  sslCertificate: string;
 };
 
 export const initialPanelSettings: PanelSettingsData = {
@@ -310,4 +313,8 @@ export const initialPanelSettings: PanelSettingsData = {
   telegramBotToken: "",
   telegramAdminChatId: "",
   isTelegramBotConnected: false,
+  domainName: "my.protocolpilot.dev",
+  sslPrivateKey: "-----BEGIN PRIVATE KEY-----\nMock Private Key Data...\n-----END PRIVATE KEY-----",
+  sslCertificate: "-----BEGIN CERTIFICATE-----\nMock Certificate Data...\n-----END CERTIFICATE-----",
 };
+

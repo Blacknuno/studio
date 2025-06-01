@@ -1,6 +1,7 @@
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { SystemSettingsCard } from "@/components/panel-settings/system-settings-card";
+import { DomainSettingsCard } from "@/components/panel-settings/domain-settings-card";
 import { XrayInboundsCard } from "@/components/panel-settings/xray-inbounds-card";
 import { TelegramBotCard } from "@/components/panel-settings/telegram-bot-card";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +19,8 @@ export default function PanelSettingsPage() {
 
         <SystemSettingsCard />
         <Separator />
+        <DomainSettingsCard />
+        <Separator />
         <XrayInboundsCard />
         <Separator />
         <TelegramBotCard />
@@ -26,3 +29,4 @@ export default function PanelSettingsPage() {
     </AppLayout>
   );
 }
+
