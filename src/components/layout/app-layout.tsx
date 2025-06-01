@@ -18,52 +18,57 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/language-context"; 
+import { LanguageSwitcher } from "./language-switcher"; 
 
 type AppLayoutProps = {
   children: React.ReactNode;
 };
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
-  { href: "/users", label: "User Management", icon: UsersRound },
-  { href: "/node-plus", label: "Node+", icon: Server },
-  { href: "/hosts", label: "Hosts", icon: Globe2 },
-  // "Psiphon Pro" is now under Node+
-  { href: "/server-nodes", label: "Server Nodes", icon: Share2 },
-  // "Tunnel Setup" is deprecated
-];
-
-const bottomNavItems = [
-  { href: "/kernels", label: "Kernels", icon: Cpu },
-  { href: "/panel-settings", label: "Panel Settings", icon: Settings },
-];
-
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
+  const { t } = useLanguage(); 
+
+  const navItems = [
+    { href: "/", labelKey: "dashboard", icon: LayoutDashboard },
+    { href: "/ai-configurator", labelKey: "ai_configurator", icon: Wand2 },
+    { href: "/users", labelKey: "user_management", icon: UsersRound },
+    { href: "/node-plus", labelKey: "node_plus", icon: Server },
+    { href: "/hosts", labelKey: "hosts", icon: Globe2 },
+    { href: "/server-nodes", labelKey: "server_nodes", icon: Share2 },
+  ];
+
+  const bottomNavItems = [
+    { href: "/kernels", labelKey: "kernels", icon: Cpu },
+    { href: "/panel-settings", labelKey: "panel_settings", icon: Settings },
+  ];
+
 
   return (
     <SidebarProvider defaultOpen>
       <Sidebar>
-        <SidebarHeader className="p-4">
+        <SidebarHeader className="p-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-headline font-semibold">ProtocolPilot</h1>
+            <h1 className="text-2xl font-headline font-semibold">{t('protocol_pilot')}</h1>
           </Link>
+          <div className="hidden md:block"> {/* Language switcher for desktop sidebar header */}
+             <LanguageSwitcher />
+          </div>
         </SidebarHeader>
         <Separator />
         <SidebarContent>
           <SidebarMenu className="flex-grow">
             {navItems.map((item) => (
-              <SidebarMenuItem key={item.label}>
+              <SidebarMenuItem key={item.labelKey}>
                 <Link href={item.href} legacyBehavior passHref>
                   <SidebarMenuButton
                     className="w-full"
                     isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                    tooltip={{ children: item.label, className: "font-body" }}
+                    tooltip={{ children: t(item.labelKey), className: "font-body" }}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span className="font-body">{item.label}</span>
+                    <span className="font-body">{t(item.labelKey)}</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -73,38 +78,41 @@ export function AppLayout({ children }: AppLayoutProps) {
              <div className="mt-auto">
                 <Separator className="my-2" />
                 {bottomNavItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
+                <SidebarMenuItem key={item.labelKey}>
                     <Link href={item.href} legacyBehavior passHref>
                     <SidebarMenuButton
                         className="w-full"
                         isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                        tooltip={{ children: item.label, className: "font-body" }}
+                        tooltip={{ children: t(item.labelKey), className: "font-body" }}
                     >
                         <item.icon className="h-5 w-5" />
-                        <span className="font-body">{item.label}</span>
+                        <span className="font-body">{t(item.labelKey)}</span>
                     </SidebarMenuButton>
                     </Link>
                 </SidebarMenuItem>
                 ))}
                 <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-                System Version: 1.0.0 (Mock)
+                {t('system_version_mock')}
                 </div>
             </div>
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 lg:hidden">
-          <SidebarTrigger asChild>
-            <Button variant="outline" size="icon" className="shrink-0">
-               <Shield className="h-5 w-5" />
-              <span className="sr-only">Toggle navigation menu</span>
-            </Button>
-          </SidebarTrigger>
-           <Link href="/" className="flex items-center gap-2">
-             <Shield className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-headline font-semibold">ProtocolPilot</h1>
-          </Link>
+        <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 lg:hidden">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0">
+                <Shield className="h-5 w-5" />
+                <span className="sr-only">{t('toggle_navigation_menu')}</span>
+              </Button>
+            </SidebarTrigger>
+            <Link href="/" className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-primary" />
+              <h1 className="text-xl font-headline font-semibold">{t('protocol_pilot')}</h1>
+            </Link>
+          </div>
+          <LanguageSwitcher /> {/* Language switcher in mobile header */}
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </SidebarInset>

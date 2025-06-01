@@ -1,10 +1,17 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  /* Default font, overridden by [dir=rtl] */
+  font-family: theme('fontFamily.body');
 }
+
+html[dir="rtl"] body {
+  font-family: theme('fontFamily.persian');
+}
+
 
 @layer base {
   :root {

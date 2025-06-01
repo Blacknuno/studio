@@ -14,6 +14,7 @@ export default {
         body: ['Inter', 'sans-serif'],
         headline: ['Space Grotesk', 'sans-serif'],
         code: ['monospace'],
+        persian: ['"Noto Sans Arabic"', 'Iran Sans', 'Tahoma', 'sans-serif'], // Added Persian font stack
       },
       colors: {
         background: 'hsl(var(--background))',
