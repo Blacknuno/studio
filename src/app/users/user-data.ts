@@ -439,4 +439,45 @@ export const initialPanelSettings: PanelSettingsData = {
   blockedCountries: [],
 };
 
-    
+export type ServerNodeStatus = 'Online' | 'Offline' | 'Error' | 'Connecting';
+export type ServerNodeConnectionType = 'grpclib' | 'websocket' | 'tcp' | 'other';
+
+export type ServerNode = {
+  id: string;
+  name: string;
+  address: string;
+  port: number;
+  connectionType: ServerNodeConnectionType;
+  consumptionFactor: number;
+  status: ServerNodeStatus;
+};
+
+export const mockServerNodes: ServerNode[] = [
+  {
+    id: "node_1",
+    name: "Primary GRPC Node (US-East)",
+    address: "us-east.myproxy.com",
+    port: 443,
+    connectionType: "grpclib",
+    consumptionFactor: 1.0,
+    status: "Online",
+  },
+  {
+    id: "node_2",
+    name: "Backup WebSocket Node (EU-West)",
+    address: "192.0.2.100",
+    port: 8080,
+    connectionType: "websocket",
+    consumptionFactor: 1.2,
+    status: "Offline",
+  },
+  {
+    id: "node_3",
+    name: "Low-Latency TCP (Asia-SG)",
+    address: "sg.mycdn.network",
+    port: 2052,
+    connectionType: "tcp",
+    consumptionFactor: 0.9,
+    status: "Online",
+  }
+];
