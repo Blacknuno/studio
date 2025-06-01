@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { User } from "@/app/users/user-data";
+import type { User, UserStatus } from "@/app/users/user-data"; // Updated UserStatus import
 import { userStatuses, protocolOptions } from "@/app/users/user-data";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -32,14 +32,19 @@ const userFormSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
   fullName: z.string().min(1, "Full name is required."),
   email: z.string().email("Invalid email address."),
-  status: z.enum(userStatuses as [string, ...string[]], { required_error: "Status is required."}),
+  status: z.enum(userStatuses as [UserStatus, ...UserStatus[]], { required_error: "Status is required."}), // Typed enum
   kernelProfile: z.string().min(1, "Kernel profile is required."),
   protocol: z.string({ required_error: "Protocol is required."}),
   dataAllowanceGB: z.coerce.number().min(0, "Data allowance must be a positive number."),
+  dataUsedGB: z.coerce.number().min(0, "Used data must be a positive number."), // Added dataUsedGB
   maxConcurrentIPs: z.coerce.number().int().min(1, "Max IPs must be at least 1."),
   validityPeriodDays: z.coerce.number().int().min(1, "Validity period must be at least 1 day."),
   notes: z.string().optional(),
+}).refine(data => data.dataUsedGB <= data.dataAllowanceGB, {
+  message: "Used data cannot exceed data allowance.",
+  path: ["dataUsedGB"], // Point error to dataUsedGB field
 });
+
 
 type UserFormData = z.infer<typeof userFormSchema>;
 
@@ -62,6 +67,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           kernelProfile: userData.kernelProfile,
           protocol: userData.protocol,
           dataAllowanceGB: userData.dataAllowanceGB,
+          dataUsedGB: userData.dataUsedGB, // Added dataUsedGB
           maxConcurrentIPs: userData.maxConcurrentIPs,
           validityPeriodDays: userData.validityPeriodDays,
           notes: userData.notes || "",
@@ -72,17 +78,51 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           email: "",
           status: "Active",
           kernelProfile: "",
-          protocol: "",
+          protocol: protocolOptions[0], // Default to first protocol
           dataAllowanceGB: 10,
+          dataUsedGB: 0, // Default used data
           maxConcurrentIPs: 1,
           validityPeriodDays: 30,
           notes: "",
         },
   });
 
+  React.useEffect(() => {
+    if (userData) {
+      form.reset({
+        username: userData.username,
+        fullName: userData.fullName,
+        email: userData.email,
+        status: userData.status,
+        kernelProfile: userData.kernelProfile,
+        protocol: userData.protocol,
+        dataAllowanceGB: userData.dataAllowanceGB,
+        dataUsedGB: userData.dataUsedGB,
+        maxConcurrentIPs: userData.maxConcurrentIPs,
+        validityPeriodDays: userData.validityPeriodDays,
+        notes: userData.notes || "",
+      });
+    } else {
+       form.reset({
+          username: "",
+          fullName: "",
+          email: "",
+          status: "Active",
+          kernelProfile: "",
+          protocol: protocolOptions[0],
+          dataAllowanceGB: 10,
+          dataUsedGB: 0,
+          maxConcurrentIPs: 1,
+          validityPeriodDays: 30,
+          notes: "",
+       });
+    }
+  }, [userData, form, isOpen]);
+
+
   const onSubmit = (data: UserFormData) => {
     const userToSave: User = {
-      ...(userData || { id: "", createdAt: new Date().toISOString() }), // Keep id and createdAt if editing
+      ...(userData || { id: "", createdAt: new Date().toISOString() }), 
       ...data,
     };
     onSave(userToSave);
@@ -181,7 +221,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
               </div>
 
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Changed to 2 columns for data allowance and used */}
                 <div>
                   <Label htmlFor="dataAllowanceGB" className="font-body">Data Allowance (GB)</Label>
                   <Input id="dataAllowanceGB" type="number" {...form.register("dataAllowanceGB")} className="font-body" />
@@ -189,6 +229,15 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
                     <p className="text-sm text-destructive pt-1">{form.formState.errors.dataAllowanceGB.message}</p>
                   )}
                 </div>
+                <div>
+                  <Label htmlFor="dataUsedGB" className="font-body">Data Used (GB)</Label>
+                  <Input id="dataUsedGB" type="number" {...form.register("dataUsedGB")} className="font-body" />
+                  {form.formState.errors.dataUsedGB && (
+                    <p className="text-sm text-destructive pt-1">{form.formState.errors.dataUsedGB.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Max IPs and Validity Period */}
                 <div>
                   <Label htmlFor="maxConcurrentIPs" className="font-body">Max Concurrent IPs</Label>
                   <Input id="maxConcurrentIPs" type="number" {...form.register("maxConcurrentIPs")} className="font-body" />
