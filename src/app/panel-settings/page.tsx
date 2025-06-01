@@ -4,6 +4,7 @@ import { SystemSettingsCard } from "@/components/panel-settings/system-settings-
 import { DomainSettingsCard } from "@/components/panel-settings/domain-settings-card";
 import { XrayInboundsCard } from "@/components/panel-settings/xray-inbounds-card";
 import { TelegramBotCard } from "@/components/panel-settings/telegram-bot-card";
+import { CountryBlockingCard } from "@/components/panel-settings/country-blocking-card";
 import { Separator } from "@/components/ui/separator";
 
 export default function PanelSettingsPage() {
@@ -24,9 +25,10 @@ export default function PanelSettingsPage() {
         <XrayInboundsCard />
         <Separator />
         <TelegramBotCard />
+        <Separator />
+        <CountryBlockingCard />
 
       </div>
     </AppLayout>
   );
 }
-

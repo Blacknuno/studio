@@ -18,7 +18,7 @@ export type XrayConfig = {
     protocol: string;
     settings?: Record<string, any>;
     streamSettings?: Record<string, any>;
-  }>; // These are typically managed in Panel Settings, not per-kernel instance directly for Xray if panel manages it.
+  }>;
   outbounds: Array<{
     tag: string;
     protocol: string;
@@ -34,12 +34,12 @@ export type OpenVPNConfig = {
   dev: 'tun' | 'tap';
   serverIp: string;
   serverNetmask: string;
-  additionalDirectives?: string; // For custom settings
+  additionalDirectives?: string;
 };
 
 export type WireGuardConfig = {
   privateKey: string;
-  address: string; // e.g. 10.0.0.1/24
+  address: string;
   listenPort: number;
   postUp?: string;
   postDown?: string;
@@ -57,14 +57,14 @@ export type SingBoxConfig = {
     servers: string[];
     strategy?: string;
   };
-  inbounds: Array<Record<string, any>>; // Flexible for various sing-box inbound types
+  inbounds: Array<Record<string, any>>;
   outbounds: Array<Record<string, any>>;
 };
 
 export type Country = {
   code: string;
   name: string;
-  flag: string; // Emoji flag
+  flag: string;
 };
 
 export const availableCountries: Country[] = [
@@ -79,19 +79,28 @@ export const availableCountries: Country[] = [
   { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
 ];
 
+export const filterableCountries: Country[] = [
+  { code: 'IR', name: 'Iran', flag: '🇮🇷' },
+  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
+  { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'KP', name: 'North Korea', flag: '🇰🇵' },
+  { code: 'SY', name: 'Syria', flag: '🇸🇾' },
+];
+
+
 export type TorWarpFakeSiteConfig = {
   ports: number[];
-  fakeDomain: string; // e.g., "speedtest.net"
-  selectedCountries: string[]; // Array of country codes
+  fakeDomain: string;
+  selectedCountries: string[];
   enableCountrySelection: boolean;
 };
 
 export type PsiphonProConfig = {
   ports: number[];
   transportMode: 'SSH' | 'OBFUSCATED_SSH' | 'HTTP_PROXY';
-  selectedCountries: string[]; // Array of country codes
+  selectedCountries: string[];
   enableCountrySelection: boolean;
-  customServerList?: string; // URL to a custom server list
+  customServerList?: string;
 };
 
 
@@ -128,7 +137,7 @@ export const kernels: Kernel[] = [
     config: {
       logLevel: 'info',
       dnsServers: ['1.1.1.1', '8.8.8.8'],
-      inbounds: [], // Inbound port config for Xray is usually global via Panel Settings
+      inbounds: [], 
       outbounds: [ { tag: 'direct', protocol: 'freedom', settings: {}} ],
     } as XrayConfig,
   },
@@ -153,7 +162,7 @@ export const kernels: Kernel[] = [
     name: "WireGuard",
     sourceUrl: "https://www.wireguard.com/",
     description: "An extremely simple yet fast and modern VPN.",
-    protocols: [{ name: "udp", label: "UDP" }], // WireGuard itself is UDP
+    protocols: [{ name: "udp", label: "UDP" }],
     status: "Stopped",
     totalDataUsedGB: 320.5,
     activeConnections: 0,
@@ -183,7 +192,7 @@ export const kernels: Kernel[] = [
   {
     id: "tor-warp",
     name: "Tor Warp Fake Site",
-    sourceUrl: "https://gitlab.torproject.org/tpo/core/tor", // Example, actual setup is complex
+    sourceUrl: "https://gitlab.torproject.org/tpo/core/tor",
     description: "Routes traffic through Tor network, potentially with WARP, using a fake site SNI.",
     protocols: [{ name: "tor", label: "Tor Proxy" }],
     status: "Running",
@@ -356,6 +365,7 @@ export type PanelSettingsData = {
   domainName: string;
   sslPrivateKey: string;
   sslCertificate: string;
+  blockedCountries: string[];
 };
 
 export const initialPanelSettings: PanelSettingsData = {
@@ -418,4 +428,5 @@ export const initialPanelSettings: PanelSettingsData = {
   domainName: "my.protocolpilot.dev",
   sslPrivateKey: "-----BEGIN PRIVATE KEY-----\nMock Private Key Data...\n-----END PRIVATE KEY-----",
   sslCertificate: "-----BEGIN CERTIFICATE-----\nMock Certificate Data...\n-----END CERTIFICATE-----",
+  blockedCountries: [],
 };
