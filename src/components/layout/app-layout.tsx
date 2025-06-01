@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route } from "lucide-react"; // Added Share2 for Server Nodes, Route for Psiphon
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Tunnel as TunnelIcon } from "lucide-react"; // Added Share2 for Server Nodes, Route for Psiphon, TunnelIcon
 import {
   SidebarProvider,
   Sidebar,
@@ -28,9 +28,13 @@ const navItems = [
   { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
   { href: "/users", label: "User Management", icon: UsersRound },
   { href: "/node-plus", label: "Node+", icon: Server },
-  { href: "/hosts", label: "Hosts", icon: Globe2 }, 
-  { href: "/psiphon-pro", label: "Psiphon Pro", icon: Route }, // New Psiphon Pro item
-  { href: "/server-nodes", label: "Server Nodes", icon: Share2 }, // New Server Nodes item
+  { href: "/hosts", label: "Hosts", icon: Globe2 },
+  { href: "/psiphon-pro", label: "Psiphon Pro", icon: Route },
+  { href: "/server-nodes", label: "Server Nodes", icon: Share2 },
+  { href: "/tunnel-setup", label: "Tunnel Setup", icon: TunnelIcon }, // New Tunnel Setup item
+];
+
+const bottomNavItems = [
   { href: "/kernels", label: "Kernels", icon: Cpu },
   { href: "/panel-settings", label: "Panel Settings", icon: Settings },
 ];
@@ -49,7 +53,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </SidebarHeader>
         <Separator />
         <SidebarContent>
-          <SidebarMenu>
+          <SidebarMenu className="flex-grow">
             {navItems.map((item) => (
               <SidebarMenuItem key={item.label}>
                 <Link href={item.href} legacyBehavior passHref>
@@ -64,8 +68,27 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Link>
               </SidebarMenuItem>
             ))}
-            <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-              System Version: 1.0.0 (Mock)
+          </SidebarMenu>
+          <SidebarMenu>
+             <div className="mt-auto">
+                <Separator className="my-2" />
+                {bottomNavItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                    <Link href={item.href} legacyBehavior passHref>
+                    <SidebarMenuButton
+                        className="w-full"
+                        isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                        tooltip={{ children: item.label, className: "font-body" }}
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-body">{item.label}</span>
+                    </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                ))}
+                <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+                System Version: 1.0.0 (Mock)
+                </div>
             </div>
           </SidebarMenu>
         </SidebarContent>
@@ -88,5 +111,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </SidebarProvider>
   );
 }
-
-    
