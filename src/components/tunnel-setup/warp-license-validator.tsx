@@ -1,91 +1,112 @@
-
 "use client";
 
-import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Spline as TunnelIcon } from "lucide-react"; 
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, ShieldQuestion, Loader2, AlertTriangle } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-interface WarpLicenseValidatorProps {
-  onLicenseValidated: () => void;
-}
+type AppLayoutProps = {
+  children: React.ReactNode;
+};
 
-export function WarpLicenseValidator({ onLicenseValidated }: WarpLicenseValidatorProps) {
-  const [licenseKey, setLicenseKey] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const { toast } = useToast();
+const navItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
+  { href: "/users", label: "User Management", icon: UsersRound },
+  { href: "/node-plus", label: "Node+", icon: Server },
+  { href: "/hosts", label: "Hosts", icon: Globe2 },
+  // "Psiphon Pro" is now under Node+
+  { href: "/server-nodes", label: "Server Nodes", icon: Share2 },
+  // "Tunnel Setup" is deprecated
+];
 
-  const handleValidate = () => {
-    setIsLoading(true);
-    setError(null);
-    // Mock validation logic
-    setTimeout(() => {
-      if (licenseKey.startsWith("WARP-VALID-") || licenseKey === "mock-valid") { // Simple mock check
-        toast({
-          title: "License Validated (Mock)",
-          description: "Your Warp license key has been successfully validated.",
-        });
-        onLicenseValidated();
-      } else {
-        setError("Invalid license key. Please check your key and try again.");
-        toast({
-          title: "License Validation Failed (Mock)",
-          description: "The provided Warp license key is not valid.",
-          variant: "destructive",
-        });
-      }
-      setIsLoading(false);
-    }, 1000);
-  };
+const bottomNavItems = [
+  { href: "/kernels", label: "Kernels", icon: Cpu },
+  { href: "/panel-settings", label: "Panel Settings", icon: Settings },
+];
+
+export function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline text-xl">Validate Warp License</CardTitle>
-        <CardDescription className="font-body">
-          Please enter your Cloudflare Warp license key to proceed.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="warpLicense" className="font-body">Warp License Key</Label>
-          <Input
-            id="warpLicense"
-            value={licenseKey}
-            onChange={(e) => {
-                setLicenseKey(e.target.value);
-                setError(null);
-            }}
-            placeholder="Enter your license key"
-            className="font-body"
-            disabled={isLoading}
-          />
-        </div>
-        {error && (
-          <p className="text-sm text-destructive flex items-center gap-1 font-body">
-            <AlertTriangle className="h-4 w-4"/> {error}
-          </p>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button onClick={handleValidate} disabled={isLoading || !licenseKey} className="font-body">
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Validating...
-            </>
-          ) : (
-            <>
-              <ShieldQuestion className="mr-2 h-4 w-4" />
-              Validate License
-            </>
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+    <SidebarProvider defaultOpen>
+      <Sidebar>
+        <SidebarHeader className="p-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-headline font-semibold">ProtocolPilot</h1>
+          </Link>
+        </SidebarHeader>
+        <Separator />
+        <SidebarContent>
+          <SidebarMenu className="flex-grow">
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.label}>
+                <Link href={item.href} legacyBehavior passHref>
+                  <SidebarMenuButton
+                    className="w-full"
+                    isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                    tooltip={{ children: item.label, className: "font-body" }}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="font-body">{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+          <SidebarMenu>
+             <div className="mt-auto">
+                <Separator className="my-2" />
+                {bottomNavItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                    <Link href={item.href} legacyBehavior passHref>
+                    <SidebarMenuButton
+                        className="w-full"
+                        isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                        tooltip={{ children: item.label, className: "font-body" }}
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-body">{item.label}</span>
+                    </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                ))}
+                <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+                System Version: 1.0.0 (Mock)
+                </div>
+            </div>
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 lg:hidden">
+          <SidebarTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0">
+               <Shield className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+          </SidebarTrigger>
+           <Link href="/" className="flex items-center gap-2">
+             <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-headline font-semibold">ProtocolPilot</h1>
+          </Link>
+        </header>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit3, PlusCircle, DownloadCloud, QrCode, ExternalLink } from "lucide-react";
+import { Edit3, PlusCircle, DownloadCloud, QrCode, ExternalLink, Route } from "lucide-react"; // Added Route for tunnel icon
 import type { User } from "@/app/users/user-data";
 import { calculateExpiresOn, kernels as kernelDefinitions } from "@/app/users/user-data";
 import { UserFormDialog } from "./user-form-dialog";
@@ -49,7 +49,6 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     );
     setUsers(updatedUsers);
     setLastInteractedUserId(userId);
-    // In a real app, you'd save this change to the backend here.
     toast({
       title: `User ${!currentIsEnabled ? "Enabled" : "Disabled"}`,
       description: `${updatedUsers.find(u=>u.id === userId)?.username} has been ${!currentIsEnabled ? "enabled" : "disabled"}.`,
@@ -59,10 +58,8 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const handleFormSave = (userToSave: User) => {
     let newUserId = userToSave.id;
     if (selectedUser) {
-      // Edit existing user
       setUsers(users.map((u) => (u.id === userToSave.id ? userToSave : u)));
     } else {
-      // Add new user
       newUserId = `usr_${Date.now()}`;
       const newUserWithId = { 
         ...userToSave, 
@@ -106,6 +103,18 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     return kernel?.protocols.find(p => p.name === protocolName)?.label || protocolName;
   };
 
+  const getTunnelInfo = (user: User): string => {
+    if (user.enableTunnelSetup && user.tunnelConfig && user.tunnelConfig.service !== 'none') {
+      let info = user.tunnelConfig.service.charAt(0).toUpperCase() + user.tunnelConfig.service.slice(1);
+      if (user.tunnelConfig.countries && user.tunnelConfig.countries.length > 0) {
+        info += `: ${user.tunnelConfig.countries.slice(0, 2).join(', ')}${user.tunnelConfig.countries.length > 2 ? '...' : ''}`;
+      }
+      return info;
+    }
+    return "No Tunnel";
+  };
+
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -119,8 +128,8 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             <TableRow>
               <TableHead className="font-body">Username</TableHead>
               <TableHead className="font-body">Status</TableHead>
-              <TableHead className="font-body">Kernel</TableHead>
-              <TableHead className="font-body">Protocol</TableHead>
+              <TableHead className="font-body">Kernel/Proto</TableHead>
+              <TableHead className="font-body">Tunnel</TableHead>
               <TableHead className="font-body text-center w-[150px]">Data Usage</TableHead>
               <TableHead className="font-body">Expires On</TableHead>
               <TableHead className="font-body text-center">Actions</TableHead>
@@ -150,8 +159,16 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                     <Badge variant={getStatusVariant(user.status, user.isEnabled)} className="font-body text-xs">{user.status}</Badge>
                   </div>
                 </TableCell>
-                <TableCell className="font-body py-2">{getKernelName(user.kernelId)}</TableCell>
-                <TableCell className="font-body py-2">{getProtocolLabel(user.kernelId, user.protocol)}</TableCell>
+                <TableCell className="font-body py-2 text-sm">
+                    <div>{getKernelName(user.kernelId)}</div>
+                    <div className="text-xs text-muted-foreground">{getProtocolLabel(user.kernelId, user.protocol)}</div>
+                </TableCell>
+                <TableCell className="font-body py-2 text-sm">
+                    <div className="flex items-center">
+                        {(user.enableTunnelSetup && user.tunnelConfig && user.tunnelConfig.service !== 'none') && <Route className="h-4 w-4 mr-1.5 text-primary" />}
+                         {getTunnelInfo(user)}
+                    </div>
+                </TableCell>
                 <TableCell className="text-center p-2">
                   <DataUsageBar used={user.dataUsedGB} allowance={user.dataAllowanceGB} />
                 </TableCell>

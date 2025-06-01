@@ -77,7 +77,7 @@ export const filterableCountries: Country[] = [
 ];
 
 
-export type TorWarpFakeSiteConfig = { // This will be primarily for Tor Service's kernel settings
+export type TorKernelConfig = { // Renamed from TorWarpFakeSiteConfig for clarity
   ports: number[];
   fakeDomain: string; // Used as SNI for Tor traffic
   selectedCountries: string[];
@@ -90,7 +90,7 @@ export type PsiphonProConfig = {
   selectedCountries: string[];
   enableCountrySelection: boolean;
   customServerList?: string;
-  bandwidthLimitMbps?: number; // New field for bandwidth throttling
+  bandwidthLimitMbps?: number; 
 };
 
 
@@ -104,7 +104,7 @@ export type Kernel = {
   status: KernelStatus;
   totalDataUsedGB: number;
   activeConnections: number;
-  config?: XrayConfig | OpenVPNConfig | WireGuardConfig | SingBoxConfig | TorWarpFakeSiteConfig | PsiphonProConfig;
+  config?: XrayConfig | OpenVPNConfig | WireGuardConfig | SingBoxConfig | TorKernelConfig | PsiphonProConfig;
 };
 
 
@@ -198,12 +198,12 @@ export const kernels: Kernel[] = [
       fakeDomain: "www.bing.com", 
       selectedCountries: ["US", "NL"],
       enableCountrySelection: true,
-    } as TorWarpFakeSiteConfig, 
+    } as TorKernelConfig, 
   },
   {
     id: "psiphon-pro",
     name: "Psiphon Pro",
-    category: "node", // This service will be managed on its own page
+    category: "node", 
     sourceUrl: "https://github.com/Psiphon-Inc/psiphon",
     description: "A circumvention tool that utilizes a combination of secure communication and obfuscation technologies.",
     protocols: [{ name: "psiphon", label: "Psiphon VPN" }],
@@ -216,7 +216,7 @@ export const kernels: Kernel[] = [
       selectedCountries: ["CA", "DE", "GB"],
       enableCountrySelection: true,
       customServerList: "",
-      bandwidthLimitMbps: 10, // Default mock bandwidth limit
+      bandwidthLimitMbps: 10, 
     } as PsiphonProConfig,
   },
 ];
@@ -239,6 +239,12 @@ export type User = {
   isEnabled: boolean; 
   notes?: string;
   sublinkPath?: string; 
+  enableTunnelSetup?: boolean;
+  tunnelConfig?: {
+    service: 'none' | 'tor' | 'warp' | 'psiphon';
+    countries?: string[]; // For Tor & Psiphon
+    warpLicenseKey?: string; // Specifically for Warp
+  };
 };
 
 export const mockUsers: User[] = [
@@ -259,6 +265,11 @@ export const mockUsers: User[] = [
     isEnabled: true,
     notes: 'VIP user, prioritize support.',
     sublinkPath: 'sub_johndoe_alpha123',
+    enableTunnelSetup: true,
+    tunnelConfig: {
+      service: 'tor',
+      countries: ['US', 'DE'],
+    }
   },
   {
     id: 'usr_2',
@@ -277,6 +288,10 @@ export const mockUsers: User[] = [
     isEnabled: false,
     notes: '',
     sublinkPath: 'sub_janesmith_beta456',
+    enableTunnelSetup: false,
+    tunnelConfig: {
+      service: 'none',
+    }
   },
   {
     id: 'usr_3',
@@ -294,6 +309,11 @@ export const mockUsers: User[] = [
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: true,
     sublinkPath: 'sub_alicew_gamma789',
+    enableTunnelSetup: true,
+    tunnelConfig: {
+      service: 'warp',
+      warpLicenseKey: 'WARP-MOCK-VALID-KEY-ALICE',
+    }
   },
   {
     id: 'usr_4',
@@ -312,6 +332,7 @@ export const mockUsers: User[] = [
     isEnabled: false,
     notes: 'Subscription ended, needs renewal.',
     sublinkPath: 'sub_bob_delta001',
+    enableTunnelSetup: false,
   },
    {
     id: 'usr_5',
@@ -330,6 +351,11 @@ export const mockUsers: User[] = [
     isEnabled: true,
     notes: 'Testing Tor service.',
     sublinkPath: 'sub_tortester_zeta321',
+    enableTunnelSetup: true,
+    tunnelConfig: {
+        service: 'psiphon',
+        countries: ['CA']
+    }
   },
 ];
 
@@ -358,13 +384,26 @@ export type FakeSiteSettings = {
 
 export type WarpServiceSettings = {
   isEnabled: boolean;
-  licenseKey: string; // New field for license key
-  // future Warp-specific settings
+  licenseKey: string; 
 };
 
 export type TorServicePanelSettings = {
     isEnabled: boolean; 
 };
+
+export type ManagedHost = {
+  id: string;
+  name: string; 
+  hostName: string; 
+  address: string; 
+  port: number;
+  networkConfig: string; 
+  streamSecurityConfig: string; 
+  muxConfig: string; 
+  notes?: string;
+  isEnabled: boolean;
+};
+
 
 export type PanelSettingsData = {
   ipAddress: string;
@@ -407,7 +446,7 @@ export const initialPanelSettings: PanelSettingsData = {
   },
   warpService: {
     isEnabled: false,
-    licenseKey: "", // Initialize new field
+    licenseKey: "", 
   },
   torServicePanel: {
       isEnabled: true, 
@@ -456,19 +495,6 @@ export const mockServerNodes: ServerNode[] = [
     status: "Online",
   }
 ];
-
-export type ManagedHost = {
-  id: string;
-  name: string; 
-  hostName: string; 
-  address: string; 
-  port: number;
-  networkConfig: string; 
-  streamSecurityConfig: string; 
-  muxConfig: string; 
-  notes?: string;
-  isEnabled: boolean;
-};
 
 export const mockManagedHosts: ManagedHost[] = [
   {

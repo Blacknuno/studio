@@ -1,74 +1,112 @@
-
 "use client";
 
-import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Spline as TunnelIcon } from "lucide-react"; 
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { availableCountries, type Country } from "@/app/users/user-data";
-import { Globe } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-interface CountrySelectorProps {
-  serviceName: string;
-  onConfirmCountries: (selectedCountries: string[]) => void;
-  initialSelectedCountries?: string[];
-}
+type AppLayoutProps = {
+  children: React.ReactNode;
+};
 
-export function CountrySelector({ serviceName, onConfirmCountries, initialSelectedCountries = [] }: CountrySelectorProps) {
-  const [selected, setSelected] = React.useState<string[]>(initialSelectedCountries);
+const navItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
+  { href: "/users", label: "User Management", icon: UsersRound },
+  { href: "/node-plus", label: "Node+", icon: Server },
+  { href: "/hosts", label: "Hosts", icon: Globe2 },
+  // "Psiphon Pro" is now under Node+
+  { href: "/server-nodes", label: "Server Nodes", icon: Share2 },
+  // "Tunnel Setup" is deprecated
+];
 
-  const handleToggleCountry = (countryCode: string) => {
-    setSelected((prev) =>
-      prev.includes(countryCode)
-        ? prev.filter((code) => code !== countryCode)
-        : [...prev, countryCode]
-    );
-  };
+const bottomNavItems = [
+  { href: "/kernels", label: "Kernels", icon: Cpu },
+  { href: "/panel-settings", label: "Panel Settings", icon: Settings },
+];
 
-  const handleSubmit = () => {
-    onConfirmCountries(selected);
-  };
+export function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline text-xl">Select Countries for {serviceName}</CardTitle>
-        <CardDescription className="font-body">
-          Choose the countries through which your {serviceName} tunnel will route traffic or connect to.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-72 w-full rounded-md border p-4">
-          <div className="space-y-3">
-            {availableCountries.map((country) => (
-              <div key={country.code} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 transition-colors">
-                <Checkbox
-                  id={`country-${country.code}`}
-                  checked={selected.includes(country.code)}
-                  onCheckedChange={() => handleToggleCountry(country.code)}
-                />
-                <Label htmlFor={`country-${country.code}`} className="flex items-center cursor-pointer font-body">
-                  <span className="mr-2 text-lg">{country.flag}</span>
-                  {country.name} ({country.code})
-                </Label>
-              </div>
+    <SidebarProvider defaultOpen>
+      <Sidebar>
+        <SidebarHeader className="p-4">
+          <Link href="/" className="flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-headline font-semibold">ProtocolPilot</h1>
+          </Link>
+        </SidebarHeader>
+        <Separator />
+        <SidebarContent>
+          <SidebarMenu className="flex-grow">
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.label}>
+                <Link href={item.href} legacyBehavior passHref>
+                  <SidebarMenuButton
+                    className="w-full"
+                    isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                    tooltip={{ children: item.label, className: "font-body" }}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="font-body">{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
             ))}
-            {availableCountries.length === 0 && (
-                <p className="text-muted-foreground text-center font-body">No countries available for selection.</p>
-            )}
-          </div>
-        </ScrollArea>
-        <p className="text-sm text-muted-foreground mt-3 font-body">
-            You have selected {selected.length} {selected.length === 1 ? "country" : "countries"}.
-        </p>
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button onClick={handleSubmit} className="font-body">
-            <Globe className="mr-2 h-4 w-4" /> Confirm Countries
-        </Button>
-      </CardFooter>
-    </Card>
+          </SidebarMenu>
+          <SidebarMenu>
+             <div className="mt-auto">
+                <Separator className="my-2" />
+                {bottomNavItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                    <Link href={item.href} legacyBehavior passHref>
+                    <SidebarMenuButton
+                        className="w-full"
+                        isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                        tooltip={{ children: item.label, className: "font-body" }}
+                    >
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-body">{item.label}</span>
+                    </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+                ))}
+                <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+                System Version: 1.0.0 (Mock)
+                </div>
+            </div>
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 lg:hidden">
+          <SidebarTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0">
+               <Shield className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+          </SidebarTrigger>
+           <Link href="/" className="flex items-center gap-2">
+             <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-xl font-headline font-semibold">ProtocolPilot</h1>
+          </Link>
+        </header>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Spline as TunnelIcon } from "lucide-react"; // Changed Tunnel to Spline
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Spline as TunnelIcon } from "lucide-react"; 
 import {
   SidebarProvider,
   Sidebar,
@@ -29,9 +29,9 @@ const navItems = [
   { href: "/users", label: "User Management", icon: UsersRound },
   { href: "/node-plus", label: "Node+", icon: Server },
   { href: "/hosts", label: "Hosts", icon: Globe2 },
-  { href: "/psiphon-pro", label: "Psiphon Pro", icon: Route },
+  // "Psiphon Pro" is now under Node+
   { href: "/server-nodes", label: "Server Nodes", icon: Share2 },
-  { href: "/tunnel-setup", label: "Tunnel Setup", icon: TunnelIcon },
+  // "Tunnel Setup" is deprecated
 ];
 
 const bottomNavItems = [
