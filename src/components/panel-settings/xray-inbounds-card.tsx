@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Edit3, PlusCircle, Trash2, Power, PowerOff } from "lucide-react";
+import { Edit3, PlusCircle, Trash2, Network } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { initialPanelSettings, type XrayInboundSetting } from "@/app/users/user-data";
 import { InboundFormDialog } from "./inbound-form-dialog";
@@ -103,9 +103,12 @@ export function XrayInboundsCard() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl">Xray Inbound Configuration</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+             <Network className="mr-2 h-6 w-6 text-primary"/> Xray Inbound Configuration
+          </CardTitle>
           <CardDescription className="font-body">
             Manage inbound connections for your Xray-core instance. Add, edit, or remove specific Xray inbounds.
+            Advanced settings like host routing, camouflage, muxing, and detailed security parameters are configured within the JSON settings of each inbound.
           </CardDescription>
         </CardHeader>
         <CardContent>

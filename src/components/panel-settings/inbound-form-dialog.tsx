@@ -52,6 +52,29 @@ interface InboundFormDialogProps {
   inboundData?: XrayInboundSetting | null;
 }
 
+const defaultSettingsPlaceholder = `{
+  "clients": [],
+  "decryption": "none"
+  // Add Mux settings here if needed, e.g.:
+  // "mux": { "enabled": true, "concurrency": 8 }
+}`;
+
+const defaultStreamSettingsPlaceholder = `{
+  "network": "ws",
+  "security": "tls",
+  "tlsSettings": {
+    "serverName": "yourdomain.com" // For SNI, essential for camouflage
+    // "certificates": [{ "certificateFile": "/path/to/cert.pem", "keyFile": "/path/to/key.pem" }]
+  },
+  "wsSettings": {
+    "path": "/vless", // Camouflage path
+    "headers": {
+      "Host": "yourdomain.com" // Host header for camouflage
+    }
+  }
+  // Add other network settings (tcp, kcp, grpc, etc.) or security enhancements here.
+}`;
+
 export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: InboundFormDialogProps) {
   const form = useForm<InboundFormData>({
     resolver: zodResolver(inboundFormSchema),
@@ -61,8 +84,8 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
           tag: "",
           port: 0,
           protocol: "vless",
-          settings: JSON.stringify({}, null, 2),
-          streamSettings: JSON.stringify({}, null, 2),
+          settings: JSON.stringify({ clients: [], decryption: "none" }, null, 2),
+          streamSettings: JSON.stringify({ network: "ws", security: "tls", wsSettings: { path: "/example", headers: { "Host": "example.com" } }, tlsSettings: {"serverName": "example.com"}}, null, 2),
           isEnabled: true,
         },
   });
@@ -74,10 +97,10 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
       } else {
         form.reset({
           tag: "",
-          port: Math.floor(Math.random() * (49151 - 1024 + 1)) + 1024, // Random default port in user range
+          port: Math.floor(Math.random() * (49151 - 1024 + 1)) + 1024, // Random default port
           protocol: "vless",
-          settings: JSON.stringify({ clients: [], decryption: "none" }, null, 2),
-          streamSettings: JSON.stringify({ network: "ws", security: "tls", wsSettings: { path: "/example" } }, null, 2),
+          settings: defaultSettingsPlaceholder,
+          streamSettings: defaultStreamSettingsPlaceholder,
           isEnabled: true,
         });
       }
@@ -100,7 +123,7 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
             {inboundData ? "Edit Xray Inbound" : "Add New Xray Inbound"}
           </DialogTitle>
           <DialogDescription className="font-body">
-            Configure the details for the Xray-core inbound connection.
+            Configure the details for the Xray-core inbound connection. Use the JSON fields for advanced settings.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -169,9 +192,11 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
                     <FormItem>
                       <FormLabel className="font-body">Settings (JSON)</FormLabel>
                       <FormControl>
-                        <Textarea {...field} className="font-mono min-h-[120px] text-xs" placeholder='{ "clients": [], "decryption": "none" }' />
+                        <Textarea {...field} className="font-mono min-h-[120px] text-xs" placeholder={defaultSettingsPlaceholder} />
                       </FormControl>
-                      <FormDescription className="font-body text-xs">Enter the main settings object as a valid JSON.</FormDescription>
+                      <FormDescription className="font-body text-xs">
+                        Enter protocol-specific settings as valid JSON (e.g., client configurations, Mux settings).
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -183,9 +208,11 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
                     <FormItem>
                       <FormLabel className="font-body">Stream Settings (JSON)</FormLabel>
                       <FormControl>
-                        <Textarea {...field} className="font-mono min-h-[120px] text-xs" placeholder='{ "network": "ws", "security": "tls", "wsSettings": { "path": "/example" } }'/>
+                        <Textarea {...field} className="font-mono min-h-[120px] text-xs" placeholder={defaultStreamSettingsPlaceholder}/>
                       </FormControl>
-                      <FormDescription className="font-body text-xs">Enter the stream settings object as a valid JSON.</FormDescription>
+                      <FormDescription className="font-body text-xs">
+                        Configure transport settings (network, security like TLS, camouflage like WebSocket path/Host header, SNI in tlsSettings.serverName) as valid JSON.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -226,3 +253,4 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
     </Dialog>
   );
 }
+
