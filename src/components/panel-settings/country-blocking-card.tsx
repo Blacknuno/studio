@@ -14,31 +14,43 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { initialPanelSettings, filterableCountries, type Country } from "@/app/users/user-data";
-import { Ban, Globe } from "lucide-react";
+import { Ban, Globe, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function CountryBlockingCard() {
   const { toast } = useToast();
   const [selectedCountries, setSelectedCountries] = React.useState<string[]>(
     initialPanelSettings.blockedCountries || []
   );
+  const [lastBlockedCountry, setLastBlockedCountry] = React.useState<Country | null>(null);
 
-  const handleCountryToggle = (countryCode: string) => {
-    setSelectedCountries((prev) =>
-      prev.includes(countryCode)
-        ? prev.filter((code) => code !== countryCode)
-        : [...prev, countryCode]
-    );
+  const handleCountryToggle = (country: Country) => {
+    const countryCode = country.code;
+    setSelectedCountries((prev) => {
+      const isCurrentlySelected = prev.includes(countryCode);
+      if (isCurrentlySelected) {
+        setLastBlockedCountry(null); // Clear if unselected
+        return prev.filter((code) => code !== countryCode);
+      } else {
+        setLastBlockedCountry(country); // Set if selected
+        return [...prev, countryCode];
+      }
+    });
   };
 
   const handleSaveChanges = () => {
-    // In a real app, you'd save these to a backend and apply blocking rules.
-    console.log("Saving blocked countries:", selectedCountries);
-    // Update mock global state (for demonstration if needed elsewhere, not robust)
     initialPanelSettings.blockedCountries = selectedCountries; 
+    console.log("Saving blocked countries:", selectedCountries);
     toast({
       title: "Country Blocking Settings Saved",
-      description: "Your geo-blocking preferences have been updated (mocked).",
+      description: `${selectedCountries.length} ${selectedCountries.length === 1 ? 'country' : 'countries'} are now in the block list (mocked).`,
     });
+    if (lastBlockedCountry) {
+        // This toast is more for immediate feedback upon checking a box,
+        // but we can reiterate on save if needed.
+        // For now, the primary toast is the general save confirmation.
+    }
+    setLastBlockedCountry(null); // Reset after save
   };
 
   return (
@@ -49,6 +61,7 @@ export function CountryBlockingCard() {
         </CardTitle>
         <CardDescription className="font-body">
           Select countries to block access from. This can help mitigate specific threats or comply with regional restrictions.
+          A full interactive map is a complex UI feature; for now, selections are made via the list below.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -60,11 +73,14 @@ export function CountryBlockingCard() {
                 <Checkbox
                   id={`block-${country.code}`}
                   checked={selectedCountries.includes(country.code)}
-                  onCheckedChange={() => handleCountryToggle(country.code)}
+                  onCheckedChange={() => handleCountryToggle(country)}
                 />
                 <Label
                   htmlFor={`block-${country.code}`}
-                  className="font-body font-normal flex items-center"
+                  className={cn(
+                    "font-body font-normal flex items-center",
+                    selectedCountries.includes(country.code) && "text-destructive font-semibold"
+                  )}
                 >
                   <span className="mr-2 text-lg">{country.flag}</span>
                   {country.name} ({country.code})
@@ -77,6 +93,16 @@ export function CountryBlockingCard() {
           </p>
         </div>
 
+        {lastBlockedCountry && (
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <p className="text-sm font-medium text-destructive">
+              {lastBlockedCountry.flag} {lastBlockedCountry.name} ({lastBlockedCountry.code}) has been selected for blocking. Save changes to apply.
+            </p>
+          </div>
+        )}
+
+
         <div className="flex justify-end">
             <Button onClick={handleSaveChanges} className="font-body">Save Blocking Settings</Button>
         </div>
@@ -84,3 +110,5 @@ export function CountryBlockingCard() {
     </Card>
   );
 }
+
+    

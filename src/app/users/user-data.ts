@@ -13,9 +13,7 @@ export type KernelCategory = 'engine' | 'node';
 export type XrayConfig = {
   logLevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
   dnsServers: string[];
-  // Inbounds and outbounds for Xray are now generally managed via Managed Hosts or global panel settings
-  // For direct kernel config, these could be simple JSON strings or more structured if needed later.
-  rawConfig?: string; // Placeholder for full raw config if needed
+  rawConfig?: string; 
 };
 
 export type OpenVPNConfig = {
@@ -49,8 +47,7 @@ export type SingBoxConfig = {
     servers: string[];
     strategy?: string;
   };
-  // Inbounds and outbounds for SingBox are now generally managed via Managed Hosts or global panel settings
-  rawConfig?: string; // Placeholder for full raw config if needed later
+  rawConfig?: string;
 };
 
 export type Country = {
@@ -116,7 +113,7 @@ export const kernels: Kernel[] = [
     name: "Xray-core",
     category: "engine",
     sourceUrl: "https://github.com/XTLS/Xray-core",
-    description: "A platform for building proxies. Detailed inbound/outbound configs via Managed Hosts or Panel Settings.",
+    description: "A platform for building proxies. Detailed inbound/outbound configs via Managed Hosts.",
     protocols: [
       { name: "vless", label: "VLESS" },
       { name: "vmess", label: "VMess" },
@@ -170,7 +167,7 @@ export const kernels: Kernel[] = [
     name: "Sing-box",
     category: "engine",
     sourceUrl: "https://github.com/SagerNet/sing-box",
-    description: "A universal proxy platform. Detailed inbound/outbound configs via Managed Hosts or Panel Settings.",
+    description: "A universal proxy platform. Detailed inbound/outbound configs via Managed Hosts.",
     protocols: [
         { name: "hysteria2", label: "Hysteria2" },
         { name: "tuic", label: "TUIC v5" },
@@ -340,9 +337,7 @@ export function calculateExpiresOn(createdAt: string, validityPeriodDays: number
   return expiresDate.toLocaleDateString();
 }
 
-
-// This type might become obsolete if Xray Inbounds are managed globally differently.
-export type XrayInboundSetting_DEPRECATED = {
+export type XrayInboundSetting = { // Renaming back as it might be used for ManagedHost context
   id: string;
   tag: string;
   port: number;
@@ -357,9 +352,10 @@ export type PanelSettingsData = {
   loginPort: number;
   loginPath: string;
   username: string;
-  // xrayInbounds removed as per request
   telegramBotToken: string;
   telegramAdminChatId: string;
+  telegramBotUsername?: string; // New field
+  telegramAdminUsername?: string; // New field
   isTelegramBotConnected: boolean;
   domainName: string;
   sslPrivateKey: string;
@@ -372,9 +368,10 @@ export const initialPanelSettings: PanelSettingsData = {
   loginPort: 2053,
   loginPath: "/paneladmin",
   username: "admin",
-  // xrayInbounds removed
   telegramBotToken: "",
   telegramAdminChatId: "",
+  telegramBotUsername: "MyProtocolPilotBot",
+  telegramAdminUsername: "admin_user",
   isTelegramBotConnected: false,
   domainName: "my.protocolpilot.dev",
   sslPrivateKey: "-----BEGIN PRIVATE KEY-----\nMock Private Key Data...\n-----END PRIVATE KEY-----",
@@ -425,7 +422,6 @@ export const mockServerNodes: ServerNode[] = [
   }
 ];
 
-// New ManagedHost Type
 export type ManagedHost = {
   id: string;
   name: string; 
@@ -436,6 +432,7 @@ export type ManagedHost = {
   streamSecurityConfig: string; 
   muxConfig: string; 
   notes?: string;
+  isEnabled: boolean; // Added field
 };
 
 export const mockManagedHosts: ManagedHost[] = [
@@ -443,7 +440,7 @@ export const mockManagedHosts: ManagedHost[] = [
     id: "host_1",
     name: "VLESS WS CDN Host",
     hostName: "cdn.mydomain.com",
-    address: "104.18.32.100", // Example CDN IP
+    address: "104.18.32.100", 
     port: 443,
     networkConfig: JSON.stringify(
       {
@@ -463,12 +460,13 @@ export const mockManagedHosts: ManagedHost[] = [
       }, null, 2),
     muxConfig: JSON.stringify({ enabled: true, concurrency: 8 }, null, 2),
     notes: "Primary VLESS over WebSocket with CDN fronting.",
+    isEnabled: true,
   },
   {
     id: "host_2",
     name: "Trojan gRPC Backend",
     hostName: "direct.backend.net",
-    address: "172.16.0.10", // Example internal IP
+    address: "172.16.0.10", 
     port: 2087,
     networkConfig: JSON.stringify(
       {
@@ -486,6 +484,7 @@ export const mockManagedHosts: ManagedHost[] = [
       }, null, 2),
     muxConfig: JSON.stringify({ enabled: false }, null, 2),
     notes: "Direct Trojan gRPC service for specific applications.",
+    isEnabled: false,
   },
 ];
 

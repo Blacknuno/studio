@@ -2,7 +2,7 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { NodeList } from "@/components/node-plus/node-list";
 import { ServerNodesTable } from "@/components/node-plus/server-nodes-table";
-import { ManagedHostsTable } from "@/components/node-plus/managed-hosts-table";
+// import { ManagedHostsTable } from "@/components/node-plus/managed-hosts-table"; // Removed
 import { Separator } from "@/components/ui/separator";
 
 export default function NodePlusPage() {
@@ -10,9 +10,9 @@ export default function NodePlusPage() {
     <AppLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">Node+ Services & Hosts</h1>
+          <h1 className="text-3xl font-headline font-semibold">Node+ Services & Server Nodes</h1>
           <p className="text-muted-foreground font-body">
-            Manage specialized proxy services (like Tor Warp, Psiphon Pro), user-defined server nodes, and configurable host endpoints.
+            Manage specialized proxy services (like Tor Warp, Psiphon Pro) and user-defined server nodes.
           </p>
         </div>
         
@@ -34,7 +34,8 @@ export default function NodePlusPage() {
         </div>
         <ServerNodesTable />
 
-        <Separator className="my-8" />
+        {/* Managed Hosts section removed from here */}
+        {/* <Separator className="my-8" />
 
         <div>
           <h2 className="text-2xl font-headline font-semibold">Managed Hosts</h2>
@@ -42,7 +43,7 @@ export default function NodePlusPage() {
             Define and configure specific host endpoints, often used for services like Xray.
           </p>
         </div>
-        <ManagedHostsTable />
+        <ManagedHostsTable /> */}
 
       </div>
     </AppLayout>

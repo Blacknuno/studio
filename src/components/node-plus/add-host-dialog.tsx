@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import type { ManagedHost } from "@/app/users/user-data";
 
@@ -35,6 +36,7 @@ const hostFormSchema = z.object({
     try { JSON.parse(val); return true; } catch { return false; }
   }, { message: "Invalid JSON format for MUX configuration." }),
   notes: z.string().optional(),
+  isEnabled: z.boolean(),
 });
 
 type HostFormData = Omit<ManagedHost, 'id'>;
@@ -86,6 +88,7 @@ export function AddHostDialog({ isOpen, onClose, onSave, hostData }: AddHostDial
           streamSecurityConfig: defaultStreamSecurityConfigPlaceholder,
           muxConfig: defaultMuxConfigPlaceholder,
           notes: "",
+          isEnabled: true,
         },
   });
 
@@ -103,6 +106,7 @@ export function AddHostDialog({ isOpen, onClose, onSave, hostData }: AddHostDial
           streamSecurityConfig: defaultStreamSecurityConfigPlaceholder,
           muxConfig: defaultMuxConfigPlaceholder,
           notes: "",
+          isEnabled: true,
         });
       }
     }
@@ -247,6 +251,21 @@ export function AddHostDialog({ isOpen, onClose, onSave, hostData }: AddHostDial
                         <Textarea {...field} className="font-body min-h-[80px]" placeholder="Optional notes about this host configuration..." />
                       </FormControl>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="isEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <FormLabel className="font-body text-sm">Enable Host Configuration</FormLabel>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />

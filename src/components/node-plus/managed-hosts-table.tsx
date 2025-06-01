@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit3, PlusCircle, Trash2, Globe } from "lucide-react";
+import { Edit3, PlusCircle, Trash2, Globe, Power, PowerOff } from "lucide-react";
 import type { ManagedHost } from "@/app/users/user-data";
 import { mockManagedHosts } from "@/app/users/user-data";
 import { AddHostDialog } from "./add-host-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +78,22 @@ export function ManagedHostsTable() {
     setSelectedHost(null);
   };
 
+  const handleToggleHostEnabled = (hostId: string) => {
+    setHosts(prevHosts =>
+      prevHosts.map(host =>
+        host.id === hostId ? { ...host, isEnabled: !host.isEnabled } : host
+      )
+    );
+    const toggledHost = hosts.find(h => h.id === hostId);
+    if (toggledHost) {
+        toast({
+            title: `Host ${!toggledHost.isEnabled ? "Enabled" : "Disabled"}`,
+            description: `Host "${toggledHost.name}" is now ${!toggledHost.isEnabled ? "enabled" : "disabled"}.`,
+        });
+    }
+  };
+
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -93,16 +109,26 @@ export function ManagedHostsTable() {
                 <TableHead className="font-body">Name</TableHead>
                 <TableHead className="font-body">Host Name</TableHead>
                 <TableHead className="font-body">Address:Port</TableHead>
+                <TableHead className="font-body text-center">Status</TableHead>
                 <TableHead className="font-body">Notes</TableHead>
                 <TableHead className="font-body text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {hosts.map((host) => (
-                <TableRow key={host.id}>
+                <TableRow key={host.id} className={cn(!host.isEnabled && "opacity-60")}>
                   <TableCell className="font-medium font-body">{host.name}</TableCell>
                   <TableCell className="font-body">{host.hostName}</TableCell>
                   <TableCell className="font-body">{host.address}:{host.port}</TableCell>
+                   <TableCell className="text-center">
+                      <Switch
+                        checked={host.isEnabled}
+                        onCheckedChange={() => handleToggleHostEnabled(host.id)}
+                        aria-label={`Toggle host ${host.name}`}
+                        className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-400"
+                      />
+                       <span className="ml-2 text-xs font-body">{host.isEnabled ? "Enabled" : "Disabled"}</span>
+                    </TableCell>
                   <TableCell className="font-body text-sm text-muted-foreground truncate max-w-xs">{host.notes || "N/A"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEditHost(host)} title="Edit Host">
