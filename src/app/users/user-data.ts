@@ -74,12 +74,13 @@ export const filterableCountries: Country[] = [
   { code: 'CN', name: 'China', flag: '🇨🇳' },
   { code: 'KP', name: 'North Korea', flag: '🇰🇵' },
   { code: 'SY', name: 'Syria', flag: '🇸🇾' },
+  ...availableCountries // Ensure filterable includes available for map interaction
 ];
 
 
-export type TorKernelConfig = { // Renamed from TorWarpFakeSiteConfig for clarity
+export type TorKernelConfig = { 
   ports: number[];
-  fakeDomain: string; // Used as SNI for Tor traffic
+  fakeDomain: string; 
   selectedCountries: string[];
   enableCountrySelection: boolean;
 };
@@ -242,8 +243,8 @@ export type User = {
   enableTunnelSetup?: boolean;
   tunnelConfig?: {
     service: 'none' | 'tor' | 'warp' | 'psiphon';
-    countries?: string[]; // For Tor & Psiphon
-    warpLicenseKey?: string; // Specifically for Warp
+    countries?: string[]; 
+    warpLicenseKey?: string; 
   };
 };
 
@@ -409,7 +410,7 @@ export type PanelSettingsData = {
   ipAddress: string;
   loginPort: number;
   loginPath: string;
-  username: string;
+  username: string; // This is the panel admin username
   telegramBotToken: string;
   telegramAdminChatId: string;
   telegramBotUsername?: string;
@@ -422,13 +423,16 @@ export type PanelSettingsData = {
   fakeSite: FakeSiteSettings;
   warpService: WarpServiceSettings;
   torServicePanel: TorServicePanelSettings;
+  loginPageBackgroundImageUrl?: string; // For mock login background
 };
+
+export const DEFAULT_USERNAME_FOR_SETUP = "admin_please_change";
 
 export const initialPanelSettings: PanelSettingsData = {
   ipAddress: "192.168.1.100", 
   loginPort: 2053,
   loginPath: "/paneladmin",
-  username: "admin",
+  username: DEFAULT_USERNAME_FOR_SETUP, // Default username indicating setup is needed
   telegramBotToken: "",
   telegramAdminChatId: "",
   telegramBotUsername: "MyProtocolPilotBot",
@@ -450,7 +454,8 @@ export const initialPanelSettings: PanelSettingsData = {
   },
   torServicePanel: {
       isEnabled: true, 
-  }
+  },
+  loginPageBackgroundImageUrl: "https://placehold.co/1920x1080.png?text=Login+Background", // Mock default background
 };
 
 export type ServerNodeStatus = 'Online' | 'Offline' | 'Error' | 'Connecting';
