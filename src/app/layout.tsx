@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { LanguageProvider } from '@/contexts/language-context'; // Import LanguageProvider
+import { LanguageProvider } from '@/contexts/language-context';
 
 export const metadata: Metadata = {
   title: 'ProtocolPilot',
@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     // LanguageProvider's useEffect will set lang and dir on document.documentElement
-    <html lang="en" dir="ltr"> {/* Default values, will be updated by context */}
+    <html lang="en" dir="ltr">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
