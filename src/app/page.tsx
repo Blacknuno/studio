@@ -10,9 +10,9 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-headline font-semibold">Dashboard</h1>
+          <h1 className="text-3xl font-headline font-semibold">ProtocolPilot Dashboard</h1>
           <p className="text-muted-foreground font-body">
-            Welcome to ProtocolPilot. Here's an overview of your system.
+            Welcome to your ProtocolPilot dashboard! Here's a live overview of your system.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

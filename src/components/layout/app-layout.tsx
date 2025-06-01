@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, ShieldZap } from "lucide-react";
+import { LayoutDashboard, Wand2, Shield } from "lucide-react"; // Changed ShieldZap to Shield
 import {
   SidebarProvider,
   Sidebar,
@@ -36,7 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar>
         <SidebarHeader className="p-4">
           <Link href="/" className="flex items-center gap-2">
-            <ShieldZap className="h-8 w-8 text-primary" />
+            <Shield className="h-8 w-8 text-primary" /> {/* Changed ShieldZap to Shield */}
             <h1 className="text-2xl font-headline font-semibold">ProtocolPilot</h1>
           </Link>
         </SidebarHeader>
@@ -64,7 +64,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6 lg:hidden">
           <SidebarTrigger asChild>
             <Button variant="outline" size="icon" className="shrink-0">
-              <ShieldZap className="h-5 w-5" />
+              <Shield className="h-5 w-5" /> {/* Changed ShieldZap to Shield */}
               <span className="sr-only">Toggle navigation menu</span>
             </Button>
           </SidebarTrigger>
