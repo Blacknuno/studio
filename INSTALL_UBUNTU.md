@@ -1,204 +1,93 @@
 
-# ProtocolPilot: Ubuntu Server Installation Guide
+# ProtocolPilot: Automated Ubuntu Server Installation Guide
 
-This guide provides basic steps to deploy the ProtocolPilot Next.js application on an Ubuntu server.
+This guide provides steps to deploy the ProtocolPilot Next.js application on an Ubuntu server using an automated installation script.
 
 ## Prerequisites
 
 1.  **Ubuntu Server**: A clean installation of Ubuntu (LTS version recommended, e.g., 20.04, 22.04).
 2.  **SSH Access**: You should have SSH access to the server with a user that has `sudo` privileges.
-3.  **Domain Name (Optional but Recommended)**: If you plan to use a domain name and SSL, have it ready and pointing to your server's IP address.
-4.  **Git**: To clone the repository.
+3.  **GitHub Repository**: Your ProtocolPilot application code must be available in a GitHub repository. You will need the HTTPS URL of this repository.
 
-## Step 1: Update System and Install Essentials
+## Step 1: Prepare the Installation Command
 
-Connect to your server via SSH and update the package lists:
+You will run a command that downloads and executes the installation script directly from its source.
 
-```bash
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y curl wget git unzip nginx # Nginx is optional but recommended for reverse proxy
-```
+1.  **Get the Installer Script URL**:
+    The official installer script for ProtocolPilot should be hosted on GitHub or another publicly accessible raw file hosting service.
+    Let's assume the script is hosted at:
+    `https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_INSTALLER_REPO/main/install.sh`
 
-## Step 2: Install Node.js and npm
+    **Note**: Replace the URL above with the actual raw URL of the `install.sh` script you created for your project. If you place the `install.sh` file (generated in the previous step by the AI) in the root of your main ProtocolPilot application repository, the URL might look like:
+    `https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO/main/install.sh`
 
-ProtocolPilot is a Next.js application and requires Node.js. We recommend using Node Version Manager (nvm) to install and manage Node.js versions.
+## Step 2: Run the Automated Installer
 
-1.  **Install nvm**:
-    ```bash
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    ```
-    After installation, you might need to close and reopen your terminal or run:
-    ```bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-    source ~/.bashrc 
-    ```
-    Verify nvm installation:
-    ```bash
-    nvm --version
-    ```
-
-2.  **Install Node.js (LTS version)**:
-    ```bash
-    nvm install --lts
-    nvm use --lts
-    ```
-    Verify Node.js and npm installation:
-    ```bash
-    node -v
-    npm -v
-    ```
-
-## Step 3: Clone the Application from GitHub
-
-Navigate to the directory where you want to install the application (e.g., `/var/www/` or your user's home directory).
+Connect to your Ubuntu server via SSH. Then, run the following command. This command downloads the `install.sh` script and executes it using `bash`. You need `sudo` because the script will install packages and configure services.
 
 ```bash
-# Example: cd /var/www
-# Replace <your-github-repo-url> with the actual URL of your ProtocolPilot repository
-git clone <your-github-repo-url> protocolpilot
-cd protocolpilot
+sudo bash -c "$(curl -Ls YOUR_RAW_INSTALL_SH_URL)"
 ```
 
-## Step 4: Install Application Dependencies
+**Replace `YOUR_RAW_INSTALL_SH_URL` with the actual raw URL of your `install.sh` script.**
 
-Inside the `protocolpilot` directory:
+For example, if your script is at `https://raw.githubusercontent.com/myuser/myprotocolpilot/main/install.sh`, the command would be:
 
 ```bash
-npm install
-```
-(If you prefer yarn: `yarn install`)
-
-## Step 5: Configure Environment Variables (If Any)
-
-If your application requires environment variables (e.g., for API keys, database connections - though this prototype uses mock data), create a `.env.local` file in the root of the `protocolpilot` directory:
-
-```bash
-cp .env .env.local # If you have a template .env file
-nano .env.local
-```
-Add your variables in the format `VARIABLE_NAME=value`.
-
-## Step 6: Build the Application
-
-Build the Next.js application for production:
-
-```bash
-npm run build
+sudo bash -c "$(curl -Ls https://raw.githubusercontent.com/myuser/myprotocolpilot/main/install.sh)"
 ```
 
-## Step 7: Run the Application with a Process Manager (PM2)
+## Step 3: Follow On-Screen Prompts
 
-PM2 is a production process manager for Node.js applications that will keep your app alive and manage logs.
+The installation script will guide you through the process. It will:
+*   Update system packages.
+*   Install Node.js, npm, PM2, and other dependencies like Nginx.
+*   **Prompt you to enter the HTTPS URL of your ProtocolPilot application's GitHub repository.** This is where your actual panel code resides.
+*   Clone your application.
+*   Install application dependencies.
+*   Build the application.
+*   Set up PM2 to run your application and start on boot.
+*   Provide you with the access URL, default username, and default password.
 
-1.  **Install PM2 globally**:
-    ```bash
-    sudo npm install pm2 -g
-    ```
+**Example Interaction during the script:**
+```
+Enter the HTTPS URL of your ProtocolPilot GitHub repository (e.g., https://github.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO.git):
+```
+You will need to paste your repository's HTTPS clone URL here and press Enter.
 
-2.  **Start the application with PM2**:
-    The default port for Next.js is 3000. The panel itself might be configured to be accessed via a different port (e.g., 2053 as per `initialPanelSettings.loginPort` in `user-data.ts`).
-    If Next.js is configured to run on a specific port (e.g., 9002 as per `package.json` dev script), you'd use that. The `npm run start` script for Next.js will typically use port 3000 unless overridden.
+## Step 4: Post-Installation
 
-    ```bash
-    pm2 start npm --name "protocolpilot" -- run start 
-    ```
-    If your `npm run start` script in `package.json` specifies a port (e.g., `next start -p <PORT>`), PM2 will use that. Otherwise, Next.js defaults to port 3000.
+Once the script finishes, it will display:
+*   The URL to access your ProtocolPilot panel (usually `http://<YOUR_SERVER_IP>:3000`).
+*   The login path (e.g., `/paneladmin`).
+*   The **default username** (`admin_please_change`) and **default password** (`password`).
 
-3.  **Ensure PM2 starts on system boot**:
-    ```bash
-    pm2 startup systemd
-    # Follow the instructions output by the command (it usually asks you to run another command with sudo)
-    pm2 save
-    ```
+**Crucial First Step:**
+Log in to your panel immediately using the provided details and navigate to **Panel Settings** to **change the default username and password** for security.
 
-4.  **Check application status**:
-    ```bash
-    pm2 list
-    pm2 logs protocolpilot
-    ```
+## Step 5: Configure Reverse Proxy (Nginx - Recommended)
 
-## Step 8: Configure Reverse Proxy (Nginx - Optional but Recommended)
+The script installs Nginx but does not fully configure it. For production use, it's highly recommended to set up Nginx as a reverse proxy. This allows you to:
+*   Serve your application on standard ports (80 for HTTP, 443 for HTTPS).
+*   Easily set up SSL/TLS for a secure HTTPS connection (e.g., using Certbot with Let's Encrypt).
+*   Improve performance and add a layer of security.
 
-Using a reverse proxy like Nginx allows you to serve your application on standard ports (80/443), handle SSL termination, and manage multiple sites.
-
-1.  **Create an Nginx server block configuration file**:
-    ```bash
-    sudo nano /etc/nginx/sites-available/protocolpilot
-    ```
-
-2.  **Paste the following configuration (adjust as needed)**:
-    Replace `your_domain.com` with your actual domain and ensure `proxy_pass` points to the port your Next.js app is running on (e.g., 3000 or the port specified in `npm run start`).
-
-    ```nginx
-    server {
-        listen 80;
-        listen [::]:80;
-
-        server_name your_domain.com www.your_domain.com; # Replace with your domain
-
-        location / {
-            proxy_pass http://localhost:3000; # Or your app's actual port
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
-        }
-    }
-    ```
-
-3.  **Enable the site and test Nginx configuration**:
-    ```bash
-    sudo ln -s /etc/nginx/sites-available/protocolpilot /etc/nginx/sites-enabled/
-    sudo nginx -t
-    ```
-
-4.  **Restart Nginx**:
-    If the test is successful:
-    ```bash
-    sudo systemctl restart nginx
-    ```
-
-5.  **Configure SSL with Certbot (Let's Encrypt)**:
-    If you have a domain, you can easily set up free SSL.
-    ```bash
-    sudo apt install certbot python3-certbot-nginx -y
-    sudo certbot --nginx -d your_domain.com -d www.your_domain.com # Follow prompts
-    ```
-    Certbot will automatically update your Nginx configuration for SSL.
-
-## Step 9: Access Your Panel
-
-You should now be able to access your ProtocolPilot panel.
-
-*   **If using Nginx with a domain**: `http://your_domain.com` or `https://your_domain.com`
-*   **If accessing directly by IP and port**: `http://<YOUR_SERVER_IP>:<APP_PORT>` (e.g., `http://<YOUR_SERVER_IP>:3000`)
-
-Then, navigate to the login path, which is configured in `src/app/users/user-data.ts` (`initialPanelSettings.loginPath`, default `/paneladmin`). So the full login URL might be something like:
-`http://<YOUR_SERVER_IP>:<APP_PORT_IF_NO_NGINX_OR_NGINX_PORT_IF_REVERSE_PROXY_SETUP>/paneladmin`
-
-**Initial Login Details (as per current prototype settings):**
-*   **Default Username**: `admin_please_change`
-*   **Default Password**: `password`
-*   **Panel Login Address Format**: `http://<YOUR_SERVER_IP>:${initialPanelSettings.loginPort}${initialPanelSettings.loginPath}` (The port here is the one configured in the panel settings, which might be different from the Next.js app's running port. Nginx would typically map port 80/443 to the app's actual running port, and the panel settings port would be for internal reference or specific direct access if allowed).
-
-**Important:** Remember to change the default username and password immediately after your first login via the "Panel Settings" page for security.
+The installation script will output an example Nginx server block configuration. You should:
+1.  Create a configuration file (e.g., `/etc/nginx/sites-available/protocolpilot`).
+2.  Paste and customize the example Nginx configuration (replace `your_domain.com` with your actual domain or server IP).
+3.  Enable the site: `sudo ln -s /etc/nginx/sites-available/protocolpilot /etc/nginx/sites-enabled/`
+4.  Test Nginx configuration: `sudo nginx -t`
+5.  Restart Nginx: `sudo systemctl restart nginx`
+6.  (Optional but Recommended) Set up SSL using Certbot: `sudo apt install certbot python3-certbot-nginx` and then `sudo certbot --nginx`.
 
 ## Troubleshooting
 
-*   **Firewall**: Ensure your server's firewall (e.g., `ufw`) allows traffic on the necessary ports (80, 443 if using Nginx; or your app's direct port like 3000).
-    ```bash
-    sudo ufw allow 'Nginx Full' # If using Nginx
-    sudo ufw allow <YOUR_APP_PORT>/tcp # e.g., sudo ufw allow 3000/tcp
-    sudo ufw enable
-    sudo ufw status
-    ```
-*   **Logs**: Check PM2 logs (`pm2 logs protocolpilot`) and Nginx logs (`/var/log/nginx/error.log`, `/var/log/nginx/access.log`) for any errors.
+*   **Script Errors**: If the script fails, check the output for error messages. Ensure your server has internet access and that the GitHub repository URL is correct and accessible.
+*   **Firewall**: Ensure your server's firewall (e.g., `ufw`) allows traffic on the necessary ports (e.g., 3000 for direct access, or 80/443 if using Nginx).
+    *   `sudo ufw allow 3000/tcp` (or your app's port)
+    *   `sudo ufw allow 'Nginx Full'` (if Nginx is configured)
+    *   `sudo ufw enable`
+*   **PM2 Logs**: Check application logs using `pm2 logs protocolpilot`.
+*   **Nginx Logs**: Check Nginx logs in `/var/log/nginx/error.log` and `/var/log/nginx/access.log`.
 
-This guide provides a starting point. Depending on your specific server setup and security requirements, further configurations might be necessary.
+This automated installer should significantly simplify the deployment process. Remember to replace placeholder URLs with your actual script and repository URLs.
