@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu } from "lucide-react";
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -28,6 +28,7 @@ const navItems = [
   { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
   { href: "/users", label: "User Management", icon: UsersRound },
   { href: "/kernels", label: "Kernels", icon: Cpu },
+  { href: "/panel-settings", label: "Panel Settings", icon: Settings },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -50,7 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Link href={item.href} legacyBehavior passHref>
                   <SidebarMenuButton
                     className="w-full"
-                    isActive={pathname === item.href}
+                    isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
                     tooltip={{ children: item.label, className: "font-body" }}
                   >
                     <item.icon className="h-5 w-5" />
