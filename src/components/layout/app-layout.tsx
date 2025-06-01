@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2 } from "lucide-react"; // Added Globe2
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route } from "lucide-react"; // Added Share2 for Server Nodes, Route for Psiphon
 import {
   SidebarProvider,
   Sidebar,
@@ -28,7 +28,9 @@ const navItems = [
   { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
   { href: "/users", label: "User Management", icon: UsersRound },
   { href: "/node-plus", label: "Node+", icon: Server },
-  { href: "/hosts", label: "Hosts", icon: Globe2 }, // New Hosts item
+  { href: "/hosts", label: "Hosts", icon: Globe2 }, 
+  { href: "/psiphon-pro", label: "Psiphon Pro", icon: Route }, // New Psiphon Pro item
+  { href: "/server-nodes", label: "Server Nodes", icon: Share2 }, // New Server Nodes item
   { href: "/kernels", label: "Kernels", icon: Cpu },
   { href: "/panel-settings", label: "Panel Settings", icon: Settings },
 ];

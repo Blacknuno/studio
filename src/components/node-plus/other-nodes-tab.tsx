@@ -17,7 +17,7 @@ const getStatusBadgeVariant = (status: KernelStatus): "default" | "secondary" | 
     case "Stopped": return "secondary"; 
     case "Error": return "destructive"; 
     case "Starting": return "outline"; 
-    case "Degraded": return "outline"; // Using "warning" equivalent
+    case "Degraded": return "outline"; 
     default: return "secondary";
   }
 };
@@ -27,16 +27,16 @@ const getStatusColorClass = (status: KernelStatus): string => {
       case "Running": return "bg-green-500";
       case "Stopped": return "bg-gray-500";
       case "Error": return "bg-red-500";
-      case "Starting": return "bg-yellow-500"; // Often used for starting/pending
-      case "Degraded": return "bg-orange-500"; // For warning/degraded
+      case "Starting": return "bg-yellow-500"; 
+      case "Degraded": return "bg-orange-500"; 
       default: return "bg-gray-500";
     }
 }
 
 export function OtherNodesTab() {
   const { toast } = useToast();
-  // Filter for nodes that are not 'tor-service' and are of category 'node'
-  const otherNodeServices = kernels.filter(k => k.id !== 'tor-service' && k.category === 'node');
+  // Filter for nodes that are not 'tor-service' or 'psiphon-pro' and are of category 'node'
+  const otherNodeServices = kernels.filter(k => k.id !== 'tor-service' && k.id !== 'psiphon-pro' && k.category === 'node');
   
   const [nodeStatuses, setNodeStatuses] = React.useState<Record<string, KernelStatus>>(
     otherNodeServices.reduce((acc, k) => ({ ...acc, [k.id]: k.status }), {})
@@ -79,7 +79,7 @@ export function OtherNodesTab() {
                  <CardTitle className="font-headline text-xl flex items-center"><ServerIcon className="mr-2 h-6 w-6 text-primary" /> Other Specialized Nodes</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground font-body text-center">No other specialized node services (like Psiphon Pro) are currently configured.</p>
+                <p className="text-muted-foreground font-body text-center">No other unclassified specialized node services are currently configured. Tor and Psiphon Pro are managed in their dedicated sections.</p>
             </CardContent>
         </Card>
     );
@@ -89,7 +89,7 @@ export function OtherNodesTab() {
     <div className="space-y-6">
         <h2 className="text-2xl font-headline font-semibold text-center">Other Specialized Nodes</h2>
         <p className="text-muted-foreground font-body text-center mb-6">
-            Manage other node-based services like Psiphon Pro.
+            Manage any other node-based services not covered by Tor, Warp, Fake Site, or Psiphon Pro.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {otherNodeServices.map((node) => (
@@ -161,3 +161,5 @@ export function OtherNodesTab() {
     </div>
   );
 }
+
+    

@@ -77,7 +77,7 @@ export const filterableCountries: Country[] = [
 ];
 
 
-export type TorWarpFakeSiteConfig = {
+export type TorWarpFakeSiteConfig = { // This will be primarily for Tor Service's kernel settings
   ports: number[];
   fakeDomain: string; // Used as SNI for Tor traffic
   selectedCountries: string[];
@@ -90,6 +90,7 @@ export type PsiphonProConfig = {
   selectedCountries: string[];
   enableCountrySelection: boolean;
   customServerList?: string;
+  bandwidthLimitMbps?: number; // New field for bandwidth throttling
 };
 
 
@@ -183,9 +184,9 @@ export const kernels: Kernel[] = [
     } as SingBoxConfig,
   },
   {
-    id: "tor-service", // Renamed from "tor-warp" to be more specific for Tor service management
-    name: "Tor Service", // Renamed
-    category: "node", // This will be managed in Node+ as a special service
+    id: "tor-service", 
+    name: "Tor Service", 
+    category: "node", 
     sourceUrl: "https://gitlab.torproject.org/tpo/core/tor",
     description: "Routes traffic through Tor network, potentially with a fake site SNI for camouflage.",
     protocols: [{ name: "tor", label: "Tor Proxy" }],
@@ -194,15 +195,15 @@ export const kernels: Kernel[] = [
     activeConnections: 12,
     config: {
       ports: [9050, 9150],
-      fakeDomain: "www.bing.com", // Default fake domain for SNI
+      fakeDomain: "www.bing.com", 
       selectedCountries: ["US", "NL"],
       enableCountrySelection: true,
-    } as TorWarpFakeSiteConfig, // Re-using this config structure for Tor
+    } as TorWarpFakeSiteConfig, 
   },
   {
     id: "psiphon-pro",
     name: "Psiphon Pro",
-    category: "node",
+    category: "node", // This service will be managed on its own page
     sourceUrl: "https://github.com/Psiphon-Inc/psiphon",
     description: "A circumvention tool that utilizes a combination of secure communication and obfuscation technologies.",
     protocols: [{ name: "psiphon", label: "Psiphon VPN" }],
@@ -215,6 +216,7 @@ export const kernels: Kernel[] = [
       selectedCountries: ["CA", "DE", "GB"],
       enableCountrySelection: true,
       customServerList: "",
+      bandwidthLimitMbps: 10, // Default mock bandwidth limit
     } as PsiphonProConfig,
   },
 ];
@@ -317,7 +319,7 @@ export const mockUsers: User[] = [
     fullName: 'Test Tor User',
     email: 'tor.user@example.com',
     status: 'Active',
-    kernelId: 'tor-service', // Updated to new Tor service ID
+    kernelId: 'tor-service', 
     kernelProfile: 'Tor Standard Profile',
     protocol: 'tor',
     dataAllowanceGB: 50,
@@ -337,7 +339,6 @@ export function calculateExpiresOn(createdAt: string, validityPeriodDays: number
   return expiresDate.toLocaleDateString();
 }
 
-// This type might be deprecated if inbounds are managed via Managed Hosts
 export type XrayInboundSetting_DEPRECATED = { 
   id: string;
   tag: string;
@@ -357,11 +358,12 @@ export type FakeSiteSettings = {
 
 export type WarpServiceSettings = {
   isEnabled: boolean;
+  licenseKey: string; // New field for license key
   // future Warp-specific settings
 };
 
 export type TorServicePanelSettings = {
-    isEnabled: boolean; // Panel-level toggle for the entire Tor service
+    isEnabled: boolean; 
 };
 
 export type PanelSettingsData = {
@@ -378,7 +380,6 @@ export type PanelSettingsData = {
   sslPrivateKey: string;
   sslCertificate: string;
   blockedCountries: string[];
-  // New service-specific settings
   fakeSite: FakeSiteSettings;
   warpService: WarpServiceSettings;
   torServicePanel: TorServicePanelSettings;
@@ -406,10 +407,10 @@ export const initialPanelSettings: PanelSettingsData = {
   },
   warpService: {
     isEnabled: false,
+    licenseKey: "", // Initialize new field
   },
   torServicePanel: {
-      isEnabled: true, // Tor service itself is enabled by default (managed by kernel.status)
-                      // This panel setting could be for additional panel-level control if needed
+      isEnabled: true, 
   }
 };
 
@@ -521,3 +522,5 @@ export const mockManagedHosts: ManagedHost[] = [
     isEnabled: false,
   },
 ];
+
+    
