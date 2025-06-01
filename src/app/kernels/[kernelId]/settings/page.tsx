@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { kernels, type Kernel, type XrayConfig, type OpenVPNConfig, type WireGuardConfig, type SingBoxConfig, type TorWarpFakeSiteConfig, type PsiphonProConfig, availableCountries } from '@/app/users/user-data';
-import { AppLayout } from "@/components/layout/app-layout"; // Assuming you might want AppLayout
+import { AppLayout } from "@/components/layout/app-layout"; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,9 +19,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Server, Settings, Globe, Shield, ListChecks, Trash2, PlusCircle } from 'lucide-react';
+import { Form, FormField, FormItem, FormMessage, FormControl, FormDescription} from "@/components/ui/form";
 
-// Zod schemas for validation (simplified for mock)
-const baseConfigSchema = z.object({}); // Placeholder
+
+const baseConfigSchema = z.object({}); 
 
 const xrayConfigSchema = z.object({
   logLevel: z.enum(['debug', 'info', 'warning', 'error', 'none']),
@@ -37,13 +38,13 @@ const openvpnConfigSchema = z.object({
 
 const wireguardConfigSchema = z.object({
   listenPort: z.coerce.number().min(1).max(65535),
-  address: z.string().min(7), // Basic validation
+  address: z.string().min(7), 
   dnsServers: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(s => s) : []),
 });
 
 const singboxConfigSchema = z.object({
   logLevel: z.enum(['debug', 'info', 'warn', 'error', 'fatal', 'panic']),
-  primaryDns: z.string().min(7), // Assuming one primary DNS for simplicity in form
+  primaryDns: z.string().min(7), 
 });
 
 const torWarpConfigSchema = z.object({
@@ -70,7 +71,6 @@ export default function KernelSettingsPage() {
   const [kernel, setKernel] = useState<Kernel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Determine the correct schema based on kernelId
   const currentKernel = kernels.find(k => k.id === kernelId);
   let currentSchema = baseConfigSchema;
   if (currentKernel) {
@@ -78,21 +78,19 @@ export default function KernelSettingsPage() {
     else if (currentKernel.id === 'openvpn') currentSchema = openvpnConfigSchema;
     else if (currentKernel.id === 'wireguard') currentSchema = wireguardConfigSchema;
     else if (currentKernel.id === 'sing-box') currentSchema = singboxConfigSchema;
-    else if (currentKernel.id === 'tor-warp') currentSchema = torWarpConfigSchema;
+    else if (currentKernel.id === 'tor-service') currentSchema = torWarpConfigSchema; // Updated ID
     else if (currentKernel.id === 'psiphon-pro') currentSchema = psiphonConfigSchema;
   }
 
 
   const form = useForm({
     resolver: zodResolver(currentSchema),
-    // Default values will be set in useEffect
   });
 
   useEffect(() => {
     const foundKernel = kernels.find(k => k.id === kernelId);
     if (foundKernel) {
       setKernel(foundKernel);
-      // Pre-fill form with existing config
       let defaultConfigValues: any = {};
       if (foundKernel.config) {
         defaultConfigValues = { ...foundKernel.config };
@@ -114,11 +112,7 @@ export default function KernelSettingsPage() {
 
   const onSubmit = (data: any) => {
     console.log("Saving kernel settings (mock):", kernelId, data);
-    // In a real app, you'd send this to a backend.
-    // For mock, we can update the `kernels` array if we decide to persist state client-side (complex)
-    // or just show a toast.
     
-    // Transform data back if needed (e.g. string to array)
     const originalKernelConfig = kernels.find(k => k.id === kernelId)?.config;
     let updatedConfig = { ...originalKernelConfig, ...data };
 
@@ -132,8 +126,6 @@ export default function KernelSettingsPage() {
         updatedConfig.dns = { ...updatedConfig.dns, servers: [data.primaryDns] };
     }
 
-
-    // This is a mock update for demonstration. In a real app, this would be a backend call.
     const kernelIndex = kernels.findIndex(k => k.id === kernelId);
     if (kernelIndex !== -1) {
       kernels[kernelIndex].config = updatedConfig as any; 
@@ -150,7 +142,7 @@ export default function KernelSettingsPage() {
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <Settings className="h-12 w-12 animate-spin text-primary" />
-          <p className="ml-4">Loading kernel settings...</p>
+          <p className="ms-4 font-body">Loading kernel settings...</p>
         </div>
       </AppLayout>
     );
@@ -161,12 +153,12 @@ export default function KernelSettingsPage() {
       <AppLayout>
         <Card>
           <CardHeader>
-            <CardTitle>Kernel Not Found</CardTitle>
+            <CardTitle className="font-headline">Kernel Not Found</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>The requested kernel configuration could not be found.</p>
-            <Button onClick={() => router.push('/kernels')} className="mt-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Kernels
+            <p className="font-body">The requested kernel configuration could not be found.</p>
+            <Button onClick={() => router.push('/kernels')} className="mt-4 font-body">
+              <ArrowLeft className="h-4 w-4 me-2 rtl:scale-x-[-1]" /> Back to Kernels
             </Button>
           </CardContent>
         </Card>
@@ -175,7 +167,7 @@ export default function KernelSettingsPage() {
   }
   
   const renderKernelSettingsForm = () => {
-    if (!kernel || !kernel.config) return <p>No configuration available for this kernel.</p>;
+    if (!kernel || !kernel.config) return <p className="font-body">No configuration available for this kernel.</p>;
 
     switch (kernel.id) {
       case 'xray':
@@ -187,15 +179,18 @@ export default function KernelSettingsPage() {
               name="logLevel"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="font-body">Log Level</Label>
+                  <FormLabel className="font-body">Log Level</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger><SelectValue placeholder="Select log level" /></SelectTrigger>
+                    <FormControl>
+                      <SelectTrigger className="font-body"><SelectValue placeholder="Select log level" /></SelectTrigger>
+                    </FormControl>
                     <SelectContent>
                       {['debug', 'info', 'warning', 'error', 'none'].map(level => (
-                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                        <SelectItem key={level} value={level} className="font-body">{level}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -204,33 +199,42 @@ export default function KernelSettingsPage() {
               name="dnsServers"
               render={({ field }) => (
                 <FormItem>
-                  <Label className="font-body">DNS Servers (comma-separated)</Label>
-                  <Input {...field} placeholder="1.1.1.1, 8.8.8.8" />
+                  <FormLabel className="font-body">DNS Servers (comma-separated)</FormLabel>
+                  <FormControl><Input {...field} placeholder="1.1.1.1, 8.8.8.8" className="font-body"/></FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-            <p className="text-sm text-muted-foreground mt-2">Xray inbounds and outbounds are typically managed globally in Panel Settings for simplicity, but core DNS and log level can be set here.</p>
+            <p className="text-sm text-muted-foreground mt-2 font-body">Xray inbounds and outbounds are typically managed globally in Managed Hosts for simplicity, but core DNS and log level can be set here.</p>
           </>
         );
       case 'openvpn':
         const ovpnConf = kernel.config as OpenVPNConfig;
         return (
           <>
-            <FormField control={form.control} name="port" render={({ field }) => (<FormItem><Label>Port</Label><Input type="number" {...field} /></FormItem>)} />
+            <FormField control={form.control} name="port" render={({ field }) => (<FormItem><FormLabel className="font-body">Port</FormLabel><FormControl><Input type="number" {...field} className="font-body"/></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="proto" render={({ field }) => (
-                <FormItem><Label>Protocol</Label><Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="tcp">TCP</SelectItem><SelectItem value="udp">UDP</SelectItem></SelectContent></Select></FormItem>
+                <FormItem><FormLabel className="font-body">Protocol</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger className="font-body"><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="tcp" className="font-body">TCP</SelectItem>
+                        <SelectItem value="udp" className="font-body">UDP</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="cipher" render={({ field }) => (<FormItem><Label>Cipher</Label><Input {...field} /></FormItem>)} />
-            <FormField control={form.control} name="additionalDirectives" render={({ field }) => (<FormItem><Label>Additional Directives</Label><Textarea {...field} placeholder="# push redirect-gateway def1..." rows={3}/></FormItem>)} />
+            <FormField control={form.control} name="cipher" render={({ field }) => (<FormItem><FormLabel className="font-body">Cipher</FormLabel><FormControl><Input {...field} className="font-body"/></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="additionalDirectives" render={({ field }) => (<FormItem><FormLabel className="font-body">Additional Directives</FormLabel><FormControl><Textarea {...field} placeholder="# push redirect-gateway def1..." rows={3} className="font-body"/></FormControl><FormMessage /></FormItem>)} />
           </>
         );
       case 'wireguard':
         const wgConf = kernel.config as WireGuardConfig;
         return (
           <>
-            <FormField control={form.control} name="listenPort" render={({ field }) => (<FormItem><Label>Listen Port</Label><Input type="number" {...field} /></FormItem>)} />
-            <FormField control={form.control} name="address" render={({ field }) => (<FormItem><Label>Server Address (CIDR)</Label><Input {...field} placeholder="e.g., 10.0.0.1/24" /></FormItem>)} />
-            <FormField control={form.control} name="dnsServers" render={({ field }) => (<FormItem><Label>DNS Servers (comma-separated)</Label><Input {...field} placeholder="1.1.1.1, 8.8.8.8" /></FormItem>)} />
+            <FormField control={form.control} name="listenPort" render={({ field }) => (<FormItem><FormLabel className="font-body">Listen Port</FormLabel><FormControl><Input type="number" {...field} className="font-body"/></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel className="font-body">Server Address (CIDR)</FormLabel><FormControl><Input {...field} placeholder="e.g., 10.0.0.1/24" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="dnsServers" render={({ field }) => (<FormItem><FormLabel className="font-body">DNS Servers (comma-separated)</FormLabel><FormControl><Input {...field} placeholder="1.1.1.1, 8.8.8.8" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
           </>
         );
       case 'sing-box':
@@ -238,32 +242,37 @@ export default function KernelSettingsPage() {
         return (
            <>
             <FormField control={form.control} name="logLevel" render={({ field }) => (
-                <FormItem><Label>Log Level</Label><Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
-                    {['debug', 'info', 'warn', 'error', 'fatal', 'panic'].map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                </SelectContent></Select></FormItem>
+                <FormItem><FormLabel className="font-body">Log Level</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger className="font-body"><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        {['debug', 'info', 'warn', 'error', 'fatal', 'panic'].map(l => <SelectItem key={l} value={l} className="font-body">{l}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="primaryDns" render={({ field }) => (<FormItem><Label>Primary DNS Server</Label><Input {...field} placeholder="1.1.1.1" /></FormItem>)} />
+            <FormField control={form.control} name="primaryDns" render={({ field }) => (<FormItem><FormLabel className="font-body">Primary DNS Server</FormLabel><FormControl><Input {...field} placeholder="1.1.1.1" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
            </>
         );
-      case 'tor-warp':
+      case 'tor-service': // Updated ID
         const torConf = kernel.config as TorWarpFakeSiteConfig;
         return (
             <>
-                <FormField control={form.control} name="ports" render={({ field }) => (<FormItem><Label>Ports (comma-separated)</Label><Input {...field} placeholder="9050, 9150" /></FormItem>)} />
-                <FormField control={form.control} name="fakeDomain" render={({ field }) => (<FormItem><Label>Fake Domain (for SNI)</Label><Input {...field} placeholder="speedtest.net" /></FormItem>)} />
+                <FormField control={form.control} name="ports" render={({ field }) => (<FormItem><FormLabel className="font-body">Ports (comma-separated)</FormLabel><FormControl><Input {...field} placeholder="9050, 9150" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="fakeDomain" render={({ field }) => (<FormItem><FormLabel className="font-body">Fake Domain (for SNI)</FormLabel><FormControl><Input {...field} placeholder="speedtest.net" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
                  <FormField
                     control={form.control}
                     name="enableCountrySelection"
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <Label htmlFor="enableTorCountrySelection" className="font-body">Enable Country Selection</Label>
-                        <Checkbox id="enableTorCountrySelection" checked={field.value} onCheckedChange={field.onChange} />
+                        <FormLabel htmlFor="enableTorCountrySelection" className="font-body">Enable Country Selection</FormLabel>
+                        <FormControl><Checkbox id="enableTorCountrySelection" checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )}
                 />
                 {form.watch("enableCountrySelection") && (
                     <FormItem>
-                        <Label className="font-body">Select Exit Countries</Label>
+                        <FormLabel className="font-body">Select Exit Countries</FormLabel>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 border rounded-md max-h-48 overflow-y-auto">
                         {availableCountries.map(country => (
                             <FormField
@@ -271,7 +280,8 @@ export default function KernelSettingsPage() {
                             control={form.control}
                             name="selectedCountries"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormControl>
                                 <Checkbox
                                     checked={field.value?.includes(country.code)}
                                     onCheckedChange={(checked) => {
@@ -280,12 +290,14 @@ export default function KernelSettingsPage() {
                                         : field.onChange( (field.value || []).filter( (value) => value !== country.code ) );
                                     }}
                                 />
-                                <Label className="font-normal">{country.flag} {country.name}</Label>
+                                </FormControl>
+                                <FormLabel className="font-normal font-body">{country.flag} {country.name}</FormLabel>
                                 </FormItem>
                             )}
                             />
                         ))}
                         </div>
+                        <FormMessage />
                     </FormItem>
                 )}
             </>
@@ -294,27 +306,32 @@ export default function KernelSettingsPage() {
         const psiphonConf = kernel.config as PsiphonProConfig;
         return (
             <>
-                <FormField control={form.control} name="ports" render={({ field }) => (<FormItem><Label>Ports (comma-separated)</Label><Input {...field} placeholder="1080, 8081" /></FormItem>)} />
+                <FormField control={form.control} name="ports" render={({ field }) => (<FormItem><FormLabel className="font-body">Ports (comma-separated)</FormLabel><FormControl><Input {...field} placeholder="1080, 8081" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="transportMode" render={({ field }) => (
-                    <FormItem><Label>Transport Mode</Label><Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
-                        <SelectItem value="SSH">SSH</SelectItem>
-                        <SelectItem value="OBFUSCATED_SSH">OBFUSCATED_SSH</SelectItem>
-                        <SelectItem value="HTTP_PROXY">HTTP_PROXY</SelectItem>
-                    </SelectContent></Select></FormItem>
+                    <FormItem><FormLabel className="font-body">Transport Mode</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger className="font-body"><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="SSH" className="font-body">SSH</SelectItem>
+                            <SelectItem value="OBFUSCATED_SSH" className="font-body">OBFUSCATED_SSH</SelectItem>
+                            <SelectItem value="HTTP_PROXY" className="font-body">HTTP_PROXY</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage /></FormItem>
                 )} />
                  <FormField
                     control={form.control}
                     name="enableCountrySelection"
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <Label htmlFor="enablePsiphonCountrySelection" className="font-body">Enable Country Selection</Label>
-                        <Checkbox id="enablePsiphonCountrySelection" checked={field.value} onCheckedChange={field.onChange} />
+                            <FormLabel htmlFor="enablePsiphonCountrySelection" className="font-body">Enable Country Selection</FormLabel>
+                            <FormControl><Checkbox id="enablePsiphonCountrySelection" checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )}
                 />
                 {form.watch("enableCountrySelection") && (
                      <FormItem>
-                        <Label className="font-body">Select Preferred Countries</Label>
+                        <FormLabel className="font-body">Select Preferred Countries</FormLabel>
                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 border rounded-md max-h-48 overflow-y-auto">
                         {availableCountries.map(country => (
                             <FormField
@@ -322,7 +339,8 @@ export default function KernelSettingsPage() {
                             control={form.control}
                             name="selectedCountries"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormControl>
                                 <Checkbox
                                     checked={field.value?.includes(country.code)}
                                     onCheckedChange={(checked) => {
@@ -331,20 +349,22 @@ export default function KernelSettingsPage() {
                                         : field.onChange( (field.value || []).filter( (value) => value !== country.code ) );
                                     }}
                                 />
-                                <Label className="font-normal">{country.flag} {country.name}</Label>
+                                </FormControl>
+                                <FormLabel className="font-normal font-body">{country.flag} {country.name}</FormLabel>
                                 </FormItem>
                             )}
                             />
                         ))}
                         </div>
+                        <FormMessage />
                     </FormItem>
                 )}
-                 <FormField control={form.control} name="customServerList" render={({ field }) => (<FormItem><Label>Custom Server List URL (Optional)</Label><Input {...field} placeholder="https://example.com/serverlist.txt" /></FormItem>)} />
+                 <FormField control={form.control} name="customServerList" render={({ field }) => (<FormItem><FormLabel className="font-body">Custom Server List URL (Optional)</FormLabel><FormControl><Input {...field} placeholder="https://example.com/serverlist.txt" className="font-body"/></FormControl><FormMessage /></FormItem>)} />
             </>
         );
 
       default:
-        return <p>No specific settings form for this kernel type yet. Raw JSON: <pre className="text-xs bg-muted p-2 rounded">{JSON.stringify(kernel.config, null, 2)}</pre></p>;
+        return <p className="font-body">No specific settings form for this kernel type yet. Raw JSON: <pre className="text-xs bg-muted p-2 rounded font-mono">{JSON.stringify(kernel.config, null, 2)}</pre></p>;
     }
   };
 
@@ -352,8 +372,8 @@ export default function KernelSettingsPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <Button variant="outline" onClick={() => router.push('/kernels')} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Kernels List
+        <Button variant="outline" onClick={() => router.push('/kernels')} className="mb-4 font-body">
+          <ArrowLeft className="h-4 w-4 me-2 rtl:scale-x-[-1]" /> Back to Kernels List
         </Button>
 
         <Card>
@@ -365,13 +385,15 @@ export default function KernelSettingsPage() {
             <CardDescription className="font-body">{kernel.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {renderKernelSettingsForm()}
-              <Separator />
-              <div className="flex justify-end">
-                <Button type="submit">Save Settings</Button>
-              </div>
-            </form>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {renderKernelSettingsForm()}
+                <Separator />
+                <div className="flex justify-end">
+                  <Button type="submit" className="font-body">Save Settings</Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
