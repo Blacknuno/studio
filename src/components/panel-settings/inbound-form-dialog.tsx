@@ -74,7 +74,7 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
       } else {
         form.reset({
           tag: "",
-          port: Math.floor(Math.random() * (65535 - 1024 + 1)) + 1024, // Random default port
+          port: Math.floor(Math.random() * (49151 - 1024 + 1)) + 1024, // Random default port in user range
           protocol: "vless",
           settings: JSON.stringify({ clients: [], decryption: "none" }, null, 2),
           streamSettings: JSON.stringify({ network: "ws", security: "tls", wsSettings: { path: "/example" } }, null, 2),
@@ -86,7 +86,7 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
 
   const onSubmit = (data: InboundFormData) => {
     const dataToSave: XrayInboundSetting = {
-      ...(inboundData || { id: "" }), // Preserve ID if editing
+      ...(inboundData || { id: "" }), 
       ...data,
     };
     onSave(dataToSave);
@@ -130,6 +130,9 @@ export function InboundFormDialog({ isOpen, onClose, onSave, inboundData }: Inbo
                         <FormControl>
                           <Input type="number" {...field} className="font-body" />
                         </FormControl>
+                        <FormDescription className="font-body text-xs">
+                          Suggested high-speed ports: 443, 8443, 2053, 2083, 2087, 2096.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

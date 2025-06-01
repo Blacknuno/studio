@@ -7,18 +7,18 @@ export type KernelProtocol = {
   label: string; // e.g., "VLESS"
 };
 
-export type KernelStatus = 'Running' | 'Stopped' | 'Error' | 'Starting';
+export type KernelStatus = 'Running' | 'Stopped' | 'Error' | 'Starting' | 'Degraded';
 
 export type XrayConfig = {
   logLevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
-  dnsServers: string[]; // list of DNS server IPs
+  dnsServers: string[];
   inbounds: Array<{
     tag: string;
     port: number;
     protocol: string;
     settings?: Record<string, any>;
     streamSettings?: Record<string, any>;
-  }>;
+  }>; // These are typically managed in Panel Settings, not per-kernel instance directly for Xray if panel manages it.
   outbounds: Array<{
     tag: string;
     protocol: string;
@@ -34,6 +34,7 @@ export type OpenVPNConfig = {
   dev: 'tun' | 'tap';
   serverIp: string;
   serverNetmask: string;
+  additionalDirectives?: string; // For custom settings
 };
 
 export type WireGuardConfig = {
@@ -42,6 +43,7 @@ export type WireGuardConfig = {
   listenPort: number;
   postUp?: string;
   postDown?: string;
+  dnsServers?: string[];
   peers: Array<{
     publicKey: string;
     allowedIPs: string;
@@ -59,16 +61,50 @@ export type SingBoxConfig = {
   outbounds: Array<Record<string, any>>;
 };
 
+export type Country = {
+  code: string;
+  name: string;
+  flag: string; // Emoji flag
+};
+
+export const availableCountries: Country[] = [
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+];
+
+export type TorWarpFakeSiteConfig = {
+  ports: number[];
+  fakeDomain: string; // e.g., "speedtest.net"
+  selectedCountries: string[]; // Array of country codes
+  enableCountrySelection: boolean;
+};
+
+export type PsiphonProConfig = {
+  ports: number[];
+  transportMode: 'SSH' | 'OBFUSCATED_SSH' | 'HTTP_PROXY';
+  selectedCountries: string[]; // Array of country codes
+  enableCountrySelection: boolean;
+  customServerList?: string; // URL to a custom server list
+};
+
+
 export type Kernel = {
-  id: string; // e.g., "xray"
-  name: string; // e.g., "Xray-core"
+  id: string;
+  name: string;
   sourceUrl?: string;
   protocols: KernelProtocol[];
   description?: string;
   status: KernelStatus;
   totalDataUsedGB: number;
   activeConnections: number;
-  config?: XrayConfig | OpenVPNConfig | WireGuardConfig | SingBoxConfig;
+  config?: XrayConfig | OpenVPNConfig | WireGuardConfig | SingBoxConfig | TorWarpFakeSiteConfig | PsiphonProConfig;
 };
 
 
@@ -77,7 +113,7 @@ export const kernels: Kernel[] = [
     id: "xray",
     name: "Xray-core",
     sourceUrl: "https://github.com/XTLS/Xray-core",
-    description: "A platform for building proxies to bypass network restrictions.",
+    description: "A platform for building proxies to bypass network restrictions. Inbounds/ports typically managed in Panel Settings.",
     protocols: [
       { name: "vless", label: "VLESS" },
       { name: "vmess", label: "VMess" },
@@ -92,10 +128,7 @@ export const kernels: Kernel[] = [
     config: {
       logLevel: 'info',
       dnsServers: ['1.1.1.1', '8.8.8.8'],
-      inbounds: [
-        { tag: 'vless-in', port: 443, protocol: 'vless', settings: { clients: [], decryption: 'none'}, streamSettings: { network: 'ws', security: 'tls', wsSettings: { path: '/vless'}}},
-        { tag: 'vmess-in', port: 8080, protocol: 'vmess', settings: { clients: []}, streamSettings: { network: 'tcp'}},
-      ],
+      inbounds: [], // Inbound port config for Xray is usually global via Panel Settings
       outbounds: [ { tag: 'direct', protocol: 'freedom', settings: {}} ],
     } as XrayConfig,
   },
@@ -112,7 +145,7 @@ export const kernels: Kernel[] = [
     totalDataUsedGB: 870.2,
     activeConnections: 75,
     config: {
-      port: 1194, proto: 'udp', cipher: 'AES-256-GCM', auth: 'SHA256', dev: 'tun', serverIp: '10.8.0.1', serverNetmask: '255.255.255.0'
+      port: 1194, proto: 'udp', cipher: 'AES-256-GCM', auth: 'SHA256', dev: 'tun', serverIp: '10.8.0.1', serverNetmask: '255.255.255.0', additionalDirectives: "# Custom OpenVPN directives here"
     } as OpenVPNConfig,
   },
   {
@@ -120,12 +153,12 @@ export const kernels: Kernel[] = [
     name: "WireGuard",
     sourceUrl: "https://www.wireguard.com/",
     description: "An extremely simple yet fast and modern VPN.",
-    protocols: [{ name: "udp", label: "UDP" }],
+    protocols: [{ name: "udp", label: "UDP" }], // WireGuard itself is UDP
     status: "Stopped",
     totalDataUsedGB: 320.5,
     activeConnections: 0,
     config: {
-      privateKey: 'GENERATED_SERVER_PRIVATE_KEY', address: '10.0.0.1/24', listenPort: 51820, peers: []
+      privateKey: 'GENERATED_SERVER_PRIVATE_KEY', address: '10.0.0.1/24', listenPort: 51820, dnsServers: ['1.1.1.1'], peers: []
     } as WireGuardConfig,
   },
   {
@@ -139,9 +172,6 @@ export const kernels: Kernel[] = [
         { name: "shadowtls", label: "ShadowTLS v3" },
         { name: "vless", label: "VLESS" },
         { name: "vmess", label: "VMess" },
-        { name: "trojan", label: "Trojan" },
-        { name: "shadowsocks", label: "Shadowsocks" },
-        { name: "naive", label: "NaiveProxy" },
     ],
     status: "Error",
     totalDataUsedGB: 50.1,
@@ -150,26 +180,59 @@ export const kernels: Kernel[] = [
       logLevel: 'info', dns: { servers: ['1.1.1.1'] }, inbounds: [], outbounds: []
     } as SingBoxConfig,
   },
+  {
+    id: "tor-warp",
+    name: "Tor Warp Fake Site",
+    sourceUrl: "https://gitlab.torproject.org/tpo/core/tor", // Example, actual setup is complex
+    description: "Routes traffic through Tor network, potentially with WARP, using a fake site SNI.",
+    protocols: [{ name: "tor", label: "Tor Proxy" }],
+    status: "Running",
+    totalDataUsedGB: 75.3,
+    activeConnections: 12,
+    config: {
+      ports: [9050, 9150],
+      fakeDomain: "speedtest.net",
+      selectedCountries: ["US", "NL"],
+      enableCountrySelection: true,
+    } as TorWarpFakeSiteConfig,
+  },
+  {
+    id: "psiphon-pro",
+    name: "Psiphon Pro",
+    sourceUrl: "https://github.com/Psiphon-Inc/psiphon",
+    description: "A circumvention tool that utilizes a combination of secure communication and obfuscation technologies.",
+    protocols: [{ name: "psiphon", label: "Psiphon VPN" }],
+    status: "Degraded",
+    totalDataUsedGB: 120.9,
+    activeConnections: 25,
+    config: {
+      ports: [1080, 8081],
+      transportMode: 'OBFUSCATED_SSH',
+      selectedCountries: ["CA", "DE", "GB"],
+      enableCountrySelection: true,
+      customServerList: "",
+    } as PsiphonProConfig,
+  },
 ];
 
 
 export type User = {
-  id: string; // uuid
+  id: string;
   username: string;
   fullName: string;
   email: string;
   status: UserStatus;
-  kernelId: string; // ID of the selected kernel
-  kernelProfile: string; // Descriptive name, can be kernel.name or custom
-  protocol: string; // Specific protocol string like "vless" or "udp"
+  kernelId: string; 
+  kernelProfile: string; 
+  protocol: string; 
   dataAllowanceGB: number;
   dataUsedGB: number;
   maxConcurrentIPs: number;
   validityPeriodDays: number;
-  createdAt: string; // ISO date string
-  isEnabled: boolean; // To enable/disable user
+  createdAt: string; 
+  isEnabled: boolean; 
   notes?: string;
-  sublinkPath?: string; // Unique path for subscription link
+  sublinkPath?: string; 
 };
 
 export const mockUsers: User[] = [
@@ -226,7 +289,7 @@ export const mockUsers: User[] = [
     isEnabled: true,
     sublinkPath: 'sub_alicew_gamma789',
   },
-    {
+  {
     id: 'usr_4',
     username: 'bobthebuilder',
     fullName: 'Bob Builder',
@@ -242,7 +305,25 @@ export const mockUsers: User[] = [
     createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: false,
     notes: 'Subscription ended, needs renewal.',
-    // No sublinkPath intentionally for this user to test UI
+    sublinkPath: 'sub_bob_delta001',
+  },
+   {
+    id: 'usr_5',
+    username: 'testtor',
+    fullName: 'Test Tor User',
+    email: 'tor.user@example.com',
+    status: 'Active',
+    kernelId: 'tor-warp',
+    kernelProfile: 'Tor Warp Standard',
+    protocol: 'tor',
+    dataAllowanceGB: 50,
+    dataUsedGB: 5,
+    maxConcurrentIPs: 1,
+    validityPeriodDays: 30,
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    isEnabled: true,
+    notes: 'Testing Tor Warp service.',
+    sublinkPath: 'sub_tortester_zeta321',
   },
 ];
 
@@ -253,14 +334,13 @@ export function calculateExpiresOn(createdAt: string, validityPeriodDays: number
 }
 
 
-// Panel Settings Data
 export type XrayInboundSetting = {
   id: string;
   tag: string;
   port: number;
   protocol: 'vless' | 'vmess' | 'trojan' | 'shadowsocks' | 'http' | 'socks';
-  settings: string; // JSON string
-  streamSettings: string; // JSON string
+  settings: string; 
+  streamSettings: string; 
   isEnabled: boolean;
 };
 
@@ -279,7 +359,7 @@ export type PanelSettingsData = {
 };
 
 export const initialPanelSettings: PanelSettingsData = {
-  ipAddress: "192.168.1.100", // Mock IP
+  ipAddress: "192.168.1.100", 
   loginPort: 2053,
   loginPath: "/paneladmin",
   username: "admin",
@@ -313,6 +393,23 @@ export const initialPanelSettings: PanelSettingsData = {
         network: "tcp",
       }, null, 2),
       isEnabled: false,
+    },
+     {
+      id: "inbound_3",
+      tag: "VLESS-GRPC-TLS",
+      port: 2087,
+      protocol: "vless",
+      settings: JSON.stringify({
+        clients: [{ "id": "your-grpc-uuid", "flow": "xtls-rprx-vision" }],
+        decryption: "none",
+      }, null, 2),
+      streamSettings: JSON.stringify({
+        network: "grpc",
+        security: "tls",
+        grpcSettings: { serviceName: "vlessgrpc" },
+        tlsSettings: { serverName: "yourdomain.com" }
+      }, null, 2),
+      isEnabled: true,
     },
   ],
   telegramBotToken: "",
