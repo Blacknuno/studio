@@ -4,13 +4,11 @@
 @tailwind utilities;
 
 body {
-  /* Default font, overridden by [dir=rtl] */
+  /* Default font */
   font-family: theme('fontFamily.body');
 }
 
-html[dir="rtl"] body {
-  font-family: theme('fontFamily.persian');
-}
+/* html[dir="rtl"] body removed */
 
 
 @layer base {

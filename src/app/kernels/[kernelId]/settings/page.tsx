@@ -158,7 +158,7 @@ export default function KernelSettingsPage() {
           <CardContent>
             <p className="font-body">The requested kernel configuration could not be found.</p>
             <Button onClick={() => router.push('/kernels')} className="mt-4 font-body">
-              <ArrowLeft className="h-4 w-4 me-2 rtl:scale-x-[-1]" /> Back to Kernels
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Kernels {/* Reverted rtl:scale-x-[-1] and me-2 to mr-2 */}
             </Button>
           </CardContent>
         </Card>
@@ -280,7 +280,7 @@ export default function KernelSettingsPage() {
                             control={form.control}
                             name="selectedCountries"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0"> {/* Removed rtl:space-x-reverse */}
                                 <FormControl>
                                 <Checkbox
                                     checked={field.value?.includes(country.code)}
@@ -339,7 +339,7 @@ export default function KernelSettingsPage() {
                             control={form.control}
                             name="selectedCountries"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0"> {/* Removed rtl:space-x-reverse */}
                                 <FormControl>
                                 <Checkbox
                                     checked={field.value?.includes(country.code)}
@@ -373,7 +373,7 @@ export default function KernelSettingsPage() {
     <AppLayout>
       <div className="space-y-6">
         <Button variant="outline" onClick={() => router.push('/kernels')} className="mb-4 font-body">
-          <ArrowLeft className="h-4 w-4 me-2 rtl:scale-x-[-1]" /> Back to Kernels List
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Kernels List {/* Reverted rtl:scale-x-[-1] and me-2 to mr-2 */}
         </Button>
 
         <Card>

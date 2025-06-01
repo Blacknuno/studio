@@ -14,7 +14,7 @@ export default {
         body: ['Inter', 'sans-serif'],
         headline: ['Space Grotesk', 'sans-serif'],
         code: ['monospace'],
-        persian: ['"Noto Sans Arabic"', 'Iran Sans', 'Tahoma', 'sans-serif'], // Added Persian font stack
+        // persian font stack removed
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -54,7 +54,7 @@ export default {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
           '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))', // Orange/Yellowish
+          '4': 'hsl(var(--chart-4))', 
           '5': 'hsl(var(--chart-5))',
         },
         sidebar: {
@@ -67,11 +67,10 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
-        // Adding explicit yellow shades for progress bar, can be themed later
         yellow: {
-          '400': '#FACC15', // Tailwind yellow-400
-          '500': '#EAB308', // Tailwind yellow-500
-          '600': '#CA8A04', // Tailwind yellow-600
+          '400': '#FACC15', 
+          '500': '#EAB308', 
+          '600': '#CA8A04', 
         }
       },
       borderRadius: {
