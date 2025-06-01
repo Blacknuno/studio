@@ -103,9 +103,9 @@ export function XrayInboundsCard() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl">Xray-core Inbound Settings</CardTitle>
+          <CardTitle className="font-headline text-xl">Xray Inbound Configuration</CardTitle>
           <CardDescription className="font-body">
-            Manage inbound connections for your Xray-core instance.
+            Manage inbound connections for your Xray-core instance. Add, edit, or remove specific Xray inbounds.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -200,3 +200,4 @@ const buttonVariants = ({variant}: {variant?: "destructive" | string | null}) =>
     }
     return "";
 }
+

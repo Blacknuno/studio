@@ -6,7 +6,7 @@ import { XrayInboundsCard } from "@/components/panel-settings/xray-inbounds-card
 import { TelegramBotCard } from "@/components/panel-settings/telegram-bot-card";
 import { CountryBlockingCard } from "@/components/panel-settings/country-blocking-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Globe, Share2, Bot, ShieldBan } from "lucide-react";
+import { Settings, Globe, Share2, Bot, ShieldBan, Network } from "lucide-react";
 
 
 export default function PanelSettingsPage() {
@@ -28,8 +28,8 @@ export default function PanelSettingsPage() {
             <TabsTrigger value="domain" className="font-body">
               <Globe className="mr-2 h-4 w-4" /> Domain & SSL
             </TabsTrigger>
-            <TabsTrigger value="xray" className="font-body">
-              <Share2 className="mr-2 h-4 w-4" /> Xray Inbounds
+            <TabsTrigger value="inbounds" className="font-body">
+              <Network className="mr-2 h-4 w-4" /> Inbound Settings
             </TabsTrigger>
             <TabsTrigger value="telegram" className="font-body">
               <Bot className="mr-2 h-4 w-4" /> Telegram Bot
@@ -45,7 +45,7 @@ export default function PanelSettingsPage() {
           <TabsContent value="domain">
             <DomainSettingsCard />
           </TabsContent>
-          <TabsContent value="xray">
+          <TabsContent value="inbounds">
             <XrayInboundsCard />
           </TabsContent>
           <TabsContent value="telegram">
@@ -59,3 +59,4 @@ export default function PanelSettingsPage() {
     </AppLayout>
   );
 }
+
