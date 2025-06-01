@@ -11,18 +11,14 @@ import {
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { bandwidthHistoricalData } from "./mock-data";
-import { ArrowDownUp, Upload, Download } from "lucide-react";
+import { Upload, Download } from "lucide-react"; // Upload icon is still used for Live Upload display
 import { useState, useEffect } from "react";
 
+// Updated chartConfig to show only download data as a single line
 const chartConfig = {
-  upload: {
-    label: "Upload",
-    color: "hsl(var(--chart-1))",
-    icon: Upload,
-  },
   download: {
     label: "Download",
-    color: "hsl(var(--chart-2))",
+    color: "hsl(var(--chart-1))", // Using primary chart color for the single line
     icon: Download,
   },
 } satisfies import("@/components/ui/chart").ChartConfig;
@@ -96,21 +92,14 @@ export function BandwidthMonitoringCard() {
               cursor={true}
               content={<ChartTooltipContent indicator="line" />}
             />
-            <Area
-              dataKey="upload"
-              type="monotone"
-              fill="var(--color-upload)"
-              fillOpacity={0.4}
-              stroke="var(--color-upload)"
-              stackId="a"
-            />
+            {/* Removed Upload Area, only Download Area remains */}
             <Area
               dataKey="download"
               type="monotone"
-              fill="var(--color-download)"
+              fill="var(--color-download)" // This will now use chartConfig.download.color (chart-1)
               fillOpacity={0.4}
-              stroke="var(--color-download)"
-              stackId="a"
+              stroke="var(--color-download)" // This will now use chartConfig.download.color (chart-1)
+              // stackId removed as it's no longer stacked
             />
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
