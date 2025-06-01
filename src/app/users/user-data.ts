@@ -74,7 +74,7 @@ export const filterableCountries: Country[] = [
   { code: 'CN', name: 'China', flag: '🇨🇳' },
   { code: 'KP', name: 'North Korea', flag: '🇰🇵' },
   { code: 'SY', name: 'Syria', flag: '🇸🇾' },
-  ...availableCountries // Ensure filterable includes available for map interaction
+  ...availableCountries 
 ];
 
 
@@ -410,7 +410,7 @@ export type PanelSettingsData = {
   ipAddress: string;
   loginPort: number;
   loginPath: string;
-  username: string; // This is the panel admin username
+  username: string; 
   telegramBotToken: string;
   telegramAdminChatId: string;
   telegramBotUsername?: string;
@@ -423,7 +423,7 @@ export type PanelSettingsData = {
   fakeSite: FakeSiteSettings;
   warpService: WarpServiceSettings;
   torServicePanel: TorServicePanelSettings;
-  loginPageBackgroundImageUrl?: string; // For mock login background
+  loginPageBackgroundImageUrl?: string; 
 };
 
 export const DEFAULT_USERNAME_FOR_SETUP = "admin_please_change";
@@ -432,7 +432,7 @@ export const initialPanelSettings: PanelSettingsData = {
   ipAddress: "192.168.1.100", 
   loginPort: 2053,
   loginPath: "/paneladmin",
-  username: DEFAULT_USERNAME_FOR_SETUP, // Default username indicating setup is needed
+  username: DEFAULT_USERNAME_FOR_SETUP, 
   telegramBotToken: "",
   telegramAdminChatId: "",
   telegramBotUsername: "MyProtocolPilotBot",
@@ -455,7 +455,7 @@ export const initialPanelSettings: PanelSettingsData = {
   torServicePanel: {
       isEnabled: true, 
   },
-  loginPageBackgroundImageUrl: "https://placehold.co/1920x1080.png?text=Login+Background", // Mock default background
+  loginPageBackgroundImageUrl: "https://placehold.co/1920x1080.png", 
 };
 
 export type ServerNodeStatus = 'Online' | 'Offline' | 'Error' | 'Connecting';

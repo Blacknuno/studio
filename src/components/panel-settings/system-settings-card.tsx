@@ -16,8 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { initialPanelSettings, DEFAULT_USERNAME_FOR_SETUP } from "@/app/users/user-data";
 import { ChangeUsernameDialog } from "./change-username-dialog";
 import { ChangePasswordDialog } from "./change-password-dialog";
-import { Info, Edit2, Image as ImageIcon, Upload, AlertTriangle } from "lucide-react";
-import Image from "next/image"; // For previewing the image
+import { Info, Edit2, Image as ImageIcon, AlertTriangle } from "lucide-react";
+import Image from "next/image"; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function SystemSettingsCard() {
@@ -25,7 +25,7 @@ export function SystemSettingsCard() {
   const [loginPort, setLoginPort] = React.useState(initialPanelSettings.loginPort);
   const [loginPath, setLoginPath] = React.useState(initialPanelSettings.loginPath);
   const [currentUsername, setCurrentUsername] = React.useState(initialPanelSettings.username);
-  const [loginBgUrl, setLoginBgUrl] = React.useState(initialPanelSettings.loginPageBackgroundImageUrl || "https://placehold.co/1920x1080.png?text=Login+Background");
+  const [loginBgUrl, setLoginBgUrl] = React.useState(initialPanelSettings.loginPageBackgroundImageUrl || "https://placehold.co/1920x1080.png");
 
   const [isUsernameDialogOpen, setIsUsernameDialogOpen] = React.useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
@@ -52,16 +52,15 @@ export function SystemSettingsCard() {
   const handleLoginBgUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Mock upload: In a real app, upload to server and get URL
-      const mockNewUrl = URL.createObjectURL(file); // Temporary local URL for preview
-      setLoginBgUrl(mockNewUrl); // Update preview
-      initialPanelSettings.loginPageBackgroundImageUrl = "mock/uploaded/image.jpg"; // Mock backend update
+      const mockNewUrl = URL.createObjectURL(file); 
+      setLoginBgUrl(mockNewUrl); 
+      initialPanelSettings.loginPageBackgroundImageUrl = "mock/uploaded/image.jpg"; 
       toast({
         title: "Login Background Updated",
         description: "Background image has been (mock) updated. Preview changed.",
       });
-      // Clean up object URL after a delay if it's a local preview
-      // setTimeout(() => URL.revokeObjectURL(mockNewUrl), 5000);
+      // Consider revoking object URL if it's purely for local preview and not persisted
+      // URL.revokeObjectURL(mockNewUrl); // This would be done if the image is uploaded and a real URL is received
     }
   };
 
@@ -161,11 +160,11 @@ export function SystemSettingsCard() {
                              <Image
                                 src={loginBgUrl}
                                 alt="Login background preview"
-                                width={400}
-                                height={225}
+                                width={1920}
+                                height={1080}
                                 className="object-cover w-full h-full"
                                 data-ai-hint="abstract background"
-                                unoptimized={loginBgUrl.startsWith('blob:')} // Prevent Next.js optimization for blob URLs
+                                unoptimized={loginBgUrl.startsWith('blob:')} 
                             />
                         </div>
                     </div>
@@ -179,13 +178,9 @@ export function SystemSettingsCard() {
                                 onChange={handleLoginBgUpload}
                                 className="font-body flex-grow"
                             />
-                            {/* The button below is not strictly necessary if the input itself is styled or if upload is auto on select */}
-                            {/* <Button type="button" variant="outline" onClick={() => document.getElementById('loginBgUpload')?.click()} className="font-body">
-                                <Upload className="mr-2 h-4 w-4" /> Choose Image
-                            </Button> */}
                         </div>
                         <p className="text-xs text-muted-foreground font-body mt-1">
-                            Select an image to use as the background for the login page. (Mock upload)
+                            Select an image (recommended 1920x1080px) to use as the background for the login page. (Mock upload)
                         </p>
                     </div>
                 </div>
