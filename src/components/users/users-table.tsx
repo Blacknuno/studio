@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -11,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit3, PlusCircle, DownloadCloud, QrCode } from "lucide-react";
+import { Edit3, PlusCircle, DownloadCloud, QrCode, ExternalLink } from "lucide-react";
 import type { User } from "@/app/users/user-data";
 import { calculateExpiresOn, kernels as kernelDefinitions } from "@/app/users/user-data";
 import { UserFormDialog } from "./user-form-dialog";
@@ -63,8 +64,13 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     } else {
       // Add new user
       newUserId = `usr_${Date.now()}`;
-      const newUser = { ...userToSave, id: newUserId , createdAt: new Date().toISOString() };
-      setUsers([newUser, ...users]);
+      const newUserWithId = { 
+        ...userToSave, 
+        id: newUserId, 
+        createdAt: new Date().toISOString(),
+        sublinkPath: userToSave.sublinkPath || `sub_${userToSave.username.toLowerCase().replace(/[^a-z0-9]/gi, '')}_${Math.random().toString(36).substring(2, 8)}`
+      };
+      setUsers([newUserWithId, ...users]);
     }
     setLastInteractedUserId(newUserId);
     setIsFormOpen(false);
@@ -76,7 +82,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   };
   
   const getStatusVariant = (status: User['status'], isEnabled: boolean) => {
-    if (!isEnabled) return 'secondary'; // Visually indicate disabled state
+    if (!isEnabled) return 'secondary'; 
     switch (status) {
       case 'Active':
         return 'default';
@@ -154,12 +160,19 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                   <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Edit User">
                     <Edit3 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Download Config", description: `Preparing config for ${user.username}...`})} title="Download Config">
+                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Download Config", description: `Preparing config for ${user.username}... (mock)`})} title="Download Config">
                     <DownloadCloud className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Show QR Code", description: `Generating QR code for ${user.username}...`})} title="Show QR Code">
+                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Show QR Code", description: `Generating QR code for ${user.username}... (mock)`})} title="Show QR Code">
                     <QrCode className="h-4 w-4" />
                   </Button>
+                  {user.sublinkPath && (
+                    <Link href={`/sub/${user.sublinkPath}`} target="_blank" passHref>
+                      <Button variant="ghost" size="icon" title="Subscription Page">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

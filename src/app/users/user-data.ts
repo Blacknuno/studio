@@ -169,6 +169,7 @@ export type User = {
   createdAt: string; // ISO date string
   isEnabled: boolean; // To enable/disable user
   notes?: string;
+  sublinkPath?: string; // Unique path for subscription link
 };
 
 export const mockUsers: User[] = [
@@ -188,6 +189,7 @@ export const mockUsers: User[] = [
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: true,
     notes: 'VIP user, prioritize support.',
+    sublinkPath: 'sub_johndoe_alpha123',
   },
   {
     id: 'usr_2',
@@ -205,6 +207,7 @@ export const mockUsers: User[] = [
     createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: false,
     notes: '',
+    sublinkPath: 'sub_janesmith_beta456',
   },
   {
     id: 'usr_3',
@@ -221,6 +224,7 @@ export const mockUsers: User[] = [
     validityPeriodDays: 365,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: true,
+    sublinkPath: 'sub_alicew_gamma789',
   },
     {
     id: 'usr_4',
@@ -238,6 +242,7 @@ export const mockUsers: User[] = [
     createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: false,
     notes: 'Subscription ended, needs renewal.',
+    // No sublinkPath intentionally for this user to test UI
   },
 ];
 
@@ -317,4 +322,3 @@ export const initialPanelSettings: PanelSettingsData = {
   sslPrivateKey: "-----BEGIN PRIVATE KEY-----\nMock Private Key Data...\n-----END PRIVATE KEY-----",
   sslCertificate: "-----BEGIN CERTIFICATE-----\nMock Certificate Data...\n-----END CERTIFICATE-----",
 };
-

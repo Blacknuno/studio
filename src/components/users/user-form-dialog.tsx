@@ -37,6 +37,8 @@ import {
   FormLabel,
   FormMessage
 } from "@/components/ui/form";
+import { Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const userFormSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
@@ -52,6 +54,7 @@ const userFormSchema = z.object({
   validityPeriodDays: z.coerce.number().int().min(1, "Validity period must be at least 1 day."),
   isEnabled: z.boolean(),
   notes: z.string().optional(),
+  sublinkPath: z.string().optional(),
 }).refine(data => data.dataUsedGB <= data.dataAllowanceGB, {
   message: "Used data cannot exceed data allowance.",
   path: ["dataUsedGB"],
@@ -68,6 +71,8 @@ interface UserFormDialogProps {
 
 export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDialogProps) {
   const [availableProtocols, setAvailableProtocols] = React.useState<KernelProtocol[]>([]);
+  const [subscriptionUrl, setSubscriptionUrl] = React.useState<string>("");
+  const { toast } = useToast();
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -75,6 +80,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
       ? {
           ...userData,
           notes: userData.notes || "",
+          sublinkPath: userData.sublinkPath || "",
         }
       : {
           username: "",
@@ -83,29 +89,39 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           status: "Active",
           kernelId: kernels[0]?.id || "",
           kernelProfile: kernels[0]?.name || "",
-          protocol: "", // Will be set based on kernel
+          protocol: "", 
           dataAllowanceGB: 10,
           dataUsedGB: 0,
           maxConcurrentIPs: 1,
           validityPeriodDays: 30,
           isEnabled: true,
           notes: "",
+          sublinkPath: "",
         },
   });
 
   const selectedKernelId = form.watch("kernelId");
+  const currentSublinkPath = form.watch("sublinkPath");
+
+  React.useEffect(() => {
+    if (currentSublinkPath && typeof window !== 'undefined') {
+      setSubscriptionUrl(`${window.location.origin}/sub/${currentSublinkPath}`);
+    } else {
+      setSubscriptionUrl("");
+    }
+  }, [currentSublinkPath]);
+
 
   React.useEffect(() => {
     if (selectedKernelId) {
       const selectedKernel = kernels.find(k => k.id === selectedKernelId);
       if (selectedKernel) {
         setAvailableProtocols(selectedKernel.protocols);
-        // If not editing, or if the current protocol is not valid for the new kernel, reset it
         if (!userData || userData.kernelId !== selectedKernelId || !selectedKernel.protocols.find(p => p.name === form.getValues("protocol"))) {
           form.setValue("protocol", selectedKernel.protocols[0]?.name || "");
         }
         if (!userData || userData.kernelId !== selectedKernelId) {
-             form.setValue("kernelProfile", selectedKernel.name); // Auto-fill kernel profile name
+             form.setValue("kernelProfile", selectedKernel.name); 
         }
       } else {
         setAvailableProtocols([]);
@@ -124,11 +140,13 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
         form.reset({
           ...userData,
           notes: userData.notes || "",
+          sublinkPath: userData.sublinkPath || "",
         });
         const initialKernel = kernels.find(k => k.id === userData.kernelId);
         setAvailableProtocols(initialKernel?.protocols || []);
       } else {
         const defaultKernel = kernels[0];
+        const newSublinkPath = `sub_${Math.random().toString(36).substring(2, 10)}`;
         form.reset({
           username: "",
           fullName: "",
@@ -143,6 +161,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           validityPeriodDays: 30,
           isEnabled: true,
           notes: "",
+          sublinkPath: newSublinkPath,
         });
         setAvailableProtocols(defaultKernel?.protocols || []);
       }
@@ -151,11 +170,29 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
 
 
   const onSubmit = (data: UserFormData) => {
-    const userToSave: User = {
+    let dataToSave: User = {
       ...(userData || { id: "", createdAt: new Date().toISOString() }),
       ...data,
     };
-    onSave(userToSave);
+
+    if (!userData && !dataToSave.sublinkPath) { // If new user and sublinkPath somehow not set
+      dataToSave.sublinkPath = `sub_${data.username.toLowerCase().replace(/[^a-z0-9]/gi, '')}_${Math.random().toString(36).substring(2, 8)}`;
+    }
+    
+    onSave(dataToSave);
+  };
+
+  const handleCopySubscriptionUrl = () => {
+    if (subscriptionUrl) {
+      navigator.clipboard.writeText(subscriptionUrl)
+        .then(() => {
+          toast({ title: "Copied!", description: "Subscription URL copied to clipboard." });
+        })
+        .catch(err => {
+          toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy URL." });
+          console.error('Failed to copy: ', err);
+        });
+    }
   };
 
   return (
@@ -280,6 +317,24 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
                       </FormItem>
                     )}
                   />
+
+                {currentSublinkPath && (
+                  <FormItem>
+                    <FormLabel className="font-body">Subscription URL</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        readOnly
+                        value={subscriptionUrl}
+                        className="font-body bg-muted"
+                        placeholder="Generating URL..."
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={handleCopySubscriptionUrl} disabled={!subscriptionUrl}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <FormDescription>Unique URL for this user's subscription page.</FormDescription>
+                  </FormItem>
+                )}
 
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
