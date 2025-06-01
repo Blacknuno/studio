@@ -27,8 +27,8 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
   { href: "/users", label: "User Management", icon: UsersRound },
-  { href: "/kernels", label: "Kernels", icon: Cpu },
   { href: "/node-plus", label: "Node+", icon: Server },
+  { href: "/kernels", label: "Kernels", icon: Cpu },
   { href: "/panel-settings", label: "Panel Settings", icon: Settings },
 ];
 
@@ -61,6 +61,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Link>
               </SidebarMenuItem>
             ))}
+            <div className="px-4 py-3 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+              System Version: 1.0.0 (Mock)
+            </div>
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
@@ -82,5 +85,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </SidebarProvider>
   );
 }
-
-    
