@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -24,27 +24,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { User, UserStatus } from "@/app/users/user-data"; // Updated UserStatus import
-import { userStatuses, protocolOptions } from "@/app/users/user-data";
+import { Switch } from "@/components/ui/switch";
+import type { User, UserStatus, KernelProtocol } from "@/app/users/user-data";
+import { userStatuses, kernels } from "@/app/users/user-data";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
 
 const userFormSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
   fullName: z.string().min(1, "Full name is required."),
   email: z.string().email("Invalid email address."),
-  status: z.enum(userStatuses as [UserStatus, ...UserStatus[]], { required_error: "Status is required."}), // Typed enum
-  kernelProfile: z.string().min(1, "Kernel profile is required."),
-  protocol: z.string({ required_error: "Protocol is required."}),
+  status: z.enum(userStatuses as [UserStatus, ...UserStatus[]], { required_error: "Status is required."}),
+  kernelId: z.string().min(1, "Kernel is required."),
+  kernelProfile: z.string().min(1, "Kernel profile name is required."), // Can be auto-filled or custom
+  protocol: z.string().min(1,"Protocol is required."),
   dataAllowanceGB: z.coerce.number().min(0, "Data allowance must be a positive number."),
-  dataUsedGB: z.coerce.number().min(0, "Used data must be a positive number."), // Added dataUsedGB
+  dataUsedGB: z.coerce.number().min(0, "Used data must be a positive number."),
   maxConcurrentIPs: z.coerce.number().int().min(1, "Max IPs must be at least 1."),
   validityPeriodDays: z.coerce.number().int().min(1, "Validity period must be at least 1 day."),
+  isEnabled: z.boolean(),
   notes: z.string().optional(),
 }).refine(data => data.dataUsedGB <= data.dataAllowanceGB, {
   message: "Used data cannot exceed data allowance.",
-  path: ["dataUsedGB"], // Point error to dataUsedGB field
+  path: ["dataUsedGB"],
 });
-
 
 type UserFormData = z.infer<typeof userFormSchema>;
 
@@ -56,20 +67,13 @@ interface UserFormDialogProps {
 }
 
 export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDialogProps) {
+  const [availableProtocols, setAvailableProtocols] = React.useState<KernelProtocol[]>([]);
+
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: userData
       ? {
-          username: userData.username,
-          fullName: userData.fullName,
-          email: userData.email,
-          status: userData.status,
-          kernelProfile: userData.kernelProfile,
-          protocol: userData.protocol,
-          dataAllowanceGB: userData.dataAllowanceGB,
-          dataUsedGB: userData.dataUsedGB, // Added dataUsedGB
-          maxConcurrentIPs: userData.maxConcurrentIPs,
-          validityPeriodDays: userData.validityPeriodDays,
+          ...userData,
           notes: userData.notes || "",
         }
       : {
@@ -77,52 +81,78 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           fullName: "",
           email: "",
           status: "Active",
-          kernelProfile: "",
-          protocol: protocolOptions[0], // Default to first protocol
-          dataAllowanceGB: 10,
-          dataUsedGB: 0, // Default used data
-          maxConcurrentIPs: 1,
-          validityPeriodDays: 30,
-          notes: "",
-        },
-  });
-
-  React.useEffect(() => {
-    if (userData) {
-      form.reset({
-        username: userData.username,
-        fullName: userData.fullName,
-        email: userData.email,
-        status: userData.status,
-        kernelProfile: userData.kernelProfile,
-        protocol: userData.protocol,
-        dataAllowanceGB: userData.dataAllowanceGB,
-        dataUsedGB: userData.dataUsedGB,
-        maxConcurrentIPs: userData.maxConcurrentIPs,
-        validityPeriodDays: userData.validityPeriodDays,
-        notes: userData.notes || "",
-      });
-    } else {
-       form.reset({
-          username: "",
-          fullName: "",
-          email: "",
-          status: "Active",
-          kernelProfile: "",
-          protocol: protocolOptions[0],
+          kernelId: kernels[0]?.id || "",
+          kernelProfile: kernels[0]?.name || "",
+          protocol: "", // Will be set based on kernel
           dataAllowanceGB: 10,
           dataUsedGB: 0,
           maxConcurrentIPs: 1,
           validityPeriodDays: 30,
+          isEnabled: true,
           notes: "",
-       });
+        },
+  });
+
+  const selectedKernelId = form.watch("kernelId");
+
+  React.useEffect(() => {
+    if (selectedKernelId) {
+      const selectedKernel = kernels.find(k => k.id === selectedKernelId);
+      if (selectedKernel) {
+        setAvailableProtocols(selectedKernel.protocols);
+        // If not editing, or if the current protocol is not valid for the new kernel, reset it
+        if (!userData || userData.kernelId !== selectedKernelId || !selectedKernel.protocols.find(p => p.name === form.getValues("protocol"))) {
+          form.setValue("protocol", selectedKernel.protocols[0]?.name || "");
+        }
+        if (!userData || userData.kernelId !== selectedKernelId) {
+             form.setValue("kernelProfile", selectedKernel.name); // Auto-fill kernel profile name
+        }
+      } else {
+        setAvailableProtocols([]);
+        form.setValue("protocol", "");
+      }
+    } else {
+      setAvailableProtocols([]);
+      form.setValue("protocol", "");
+    }
+  }, [selectedKernelId, form, userData]);
+
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (userData) {
+        form.reset({
+          ...userData,
+          notes: userData.notes || "",
+        });
+        const initialKernel = kernels.find(k => k.id === userData.kernelId);
+        setAvailableProtocols(initialKernel?.protocols || []);
+      } else {
+        const defaultKernel = kernels[0];
+        form.reset({
+          username: "",
+          fullName: "",
+          email: "",
+          status: "Active",
+          kernelId: defaultKernel?.id || "",
+          kernelProfile: defaultKernel?.name || "",
+          protocol: defaultKernel?.protocols[0]?.name || "",
+          dataAllowanceGB: 10,
+          dataUsedGB: 0,
+          maxConcurrentIPs: 1,
+          validityPeriodDays: 30,
+          isEnabled: true,
+          notes: "",
+        });
+        setAvailableProtocols(defaultKernel?.protocols || []);
+      }
     }
   }, [userData, form, isOpen]);
 
 
   const onSubmit = (data: UserFormData) => {
     const userToSave: User = {
-      ...(userData || { id: "", createdAt: new Date().toISOString() }), 
+      ...(userData || { id: "", createdAt: new Date().toISOString() }),
       ...data,
     };
     onSave(userToSave);
@@ -139,139 +169,250 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
             {userData ? "Update the details for this user." : "Fill in the details for the new user."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <ScrollArea className="h-[60vh] pr-6">
-            <div className="space-y-4 py-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="username" className="font-body">Username</Label>
-                  <Input id="username" {...form.register("username")} className="font-body" />
-                  {form.formState.errors.username && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.username.message}</p>
-                  )}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <ScrollArea className="h-[65vh] pr-6">
+              <div className="space-y-4 py-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Username</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Full Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                <div>
-                  <Label htmlFor="fullName" className="font-body">Full Name</Label>
-                  <Input id="fullName" {...form.register("fullName")} className="font-body" />
-                  {form.formState.errors.fullName && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.fullName.message}</p>
-                  )}
-                </div>
-              </div>
 
-              <div>
-                <Label htmlFor="email" className="font-body">Email</Label>
-                <Input id="email" type="email" {...form.register("email")} className="font-body" />
-                {form.formState.errors.email && (
-                  <p className="text-sm text-destructive pt-1">{form.formState.errors.email.message}</p>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status" className="font-body">Status</Label>
-                   <Select
-                    onValueChange={(value) => form.setValue("status", value as UserStatus)}
-                    defaultValue={form.getValues("status")}
-                  >
-                    <SelectTrigger id="status" className="font-body">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userStatuses.map((status) => (
-                        <SelectItem key={status} value={status} className="font-body">
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.status && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.status.message}</p>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-body">Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} className="font-body" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
+                />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <FormField
+                    control={form.control}
+                    name="kernelId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Kernel</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="font-body">
+                              <SelectValue placeholder="Select kernel" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {kernels.map((kernel) => (
+                              <SelectItem key={kernel.id} value={kernel.id} className="font-body">
+                                {kernel.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="protocol"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Protocol</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={availableProtocols.length === 0}>
+                          <FormControl>
+                            <SelectTrigger className="font-body">
+                              <SelectValue placeholder="Select protocol" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableProtocols.map((protocol) => (
+                              <SelectItem key={protocol.name} value={protocol.name} className="font-body">
+                                {protocol.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                 <div>
-                  <Label htmlFor="protocol" className="font-body">Protocol</Label>
-                  <Select
-                     onValueChange={(value) => form.setValue("protocol", value)}
-                     defaultValue={form.getValues("protocol")}
-                  >
-                    <SelectTrigger id="protocol" className="font-body">
-                      <SelectValue placeholder="Select protocol" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {protocolOptions.map((protocol) => (
-                        <SelectItem key={protocol} value={protocol} className="font-body">
-                          {protocol}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.protocol && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.protocol.message}</p>
-                  )}
-                </div>
-              </div>
+                 <FormField
+                    control={form.control}
+                    name="kernelProfile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Kernel Profile Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="font-body" placeholder="e.g., Xray VLESS Standard"/>
+                        </FormControl>
+                        <FormDescription>A descriptive name for this configuration.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div>
-                <Label htmlFor="kernelProfile" className="font-body">Kernel Profile</Label>
-                <Input id="kernelProfile" {...form.register("kernelProfile")} className="font-body" placeholder="e.g., High-Performance Kernel v5.4"/>
-                {form.formState.errors.kernelProfile && (
-                  <p className="text-sm text-destructive pt-1">{form.formState.errors.kernelProfile.message}</p>
-                )}
-              </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="dataAllowanceGB"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Data Allowance (GB)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="dataUsedGB"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Data Used (GB)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="maxConcurrentIPs"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Max Concurrent IPs</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="validityPeriodDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-body">Validity (Days)</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} className="font-body" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-body">Account Status</FormLabel>
+                           <Select
+                              onValueChange={(value) => field.onChange(value as UserStatus)}
+                              defaultValue={field.value}
+                            >
+                            <FormControl>
+                              <SelectTrigger id="status" className="font-body">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {userStatuses.map((status) => (
+                                <SelectItem key={status} value={status} className="font-body">
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isEnabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col justify-end">
+                           <FormLabel className="font-body invisible">Enable User Label</FormLabel> {/* Hidden label for spacing */}
+                          <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-[40px]">
+                            <FormLabel htmlFor="isEnabledSwitch" className="font-body text-sm">User Enabled</FormLabel>
+                            <FormControl>
+                              <Switch
+                                id="isEnabledSwitch"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </div>
+                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Changed to 2 columns for data allowance and used */}
-                <div>
-                  <Label htmlFor="dataAllowanceGB" className="font-body">Data Allowance (GB)</Label>
-                  <Input id="dataAllowanceGB" type="number" {...form.register("dataAllowanceGB")} className="font-body" />
-                  {form.formState.errors.dataAllowanceGB && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.dataAllowanceGB.message}</p>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-body">Notes</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} className="font-body min-h-[80px]" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-                <div>
-                  <Label htmlFor="dataUsedGB" className="font-body">Data Used (GB)</Label>
-                  <Input id="dataUsedGB" type="number" {...form.register("dataUsedGB")} className="font-body" />
-                  {form.formState.errors.dataUsedGB && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.dataUsedGB.message}</p>
-                  )}
-                </div>
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Max IPs and Validity Period */}
-                <div>
-                  <Label htmlFor="maxConcurrentIPs" className="font-body">Max Concurrent IPs</Label>
-                  <Input id="maxConcurrentIPs" type="number" {...form.register("maxConcurrentIPs")} className="font-body" />
-                  {form.formState.errors.maxConcurrentIPs && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.maxConcurrentIPs.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="validityPeriodDays" className="font-body">Validity (Days)</Label>
-                  <Input id="validityPeriodDays" type="number" {...form.register("validityPeriodDays")} className="font-body" />
-                  {form.formState.errors.validityPeriodDays && (
-                    <p className="text-sm text-destructive pt-1">{form.formState.errors.validityPeriodDays.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes" className="font-body">Notes</Label>
-                <Textarea id="notes" {...form.register("notes")} className="font-body min-h-[80px]" />
-                {form.formState.errors.notes && (
-                  <p className="text-sm text-destructive pt-1">{form.formState.errors.notes.message}</p>
-                )}
-              </div>
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="font-body">
-              Cancel
-            </Button>
-            <Button type="submit" className="font-body">
-              {userData ? "Save Changes" : "Create User"}
-            </Button>
-          </DialogFooter>
-        </form>
+            </ScrollArea>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} className="font-body">
+                Cancel
+              </Button>
+              <Button type="submit" className="font-body">
+                {userData ? "Save Changes" : "Create User"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

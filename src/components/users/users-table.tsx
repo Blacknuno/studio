@@ -11,25 +11,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit3, PlusCircle } from "lucide-react";
+import { Edit3, PlusCircle, DownloadCloud, QrCode } from "lucide-react";
 import type { User } from "@/app/users/user-data";
-import { calculateExpiresOn } from "@/app/users/user-data";
+import { calculateExpiresOn, kernels as kernelDefinitions } from "@/app/users/user-data";
 import { UserFormDialog } from "./user-form-dialog";
 import { Badge } from "@/components/ui/badge";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { Switch } from "@/components/ui/switch";
+import { DataUsageBar } from "./data-usage-bar";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
   initialUsers: User[];
 }
 
-const PIE_COLORS = ['hsl(var(--chart-2))', 'hsl(var(--chart-1))']; // Used (Accent), Remaining (Primary)
-
 export function UsersTable({ initialUsers }: UsersTableProps) {
   const [users, setUsers] = React.useState<User[]>(initialUsers);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [lastInteractedUserId, setLastInteractedUserId] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleAddUser = () => {
     setSelectedUser(null);
@@ -39,6 +40,19 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsFormOpen(true);
+  };
+
+  const handleToggleUserEnabled = (userId: string, currentIsEnabled: boolean) => {
+    const updatedUsers = users.map((u) =>
+      u.id === userId ? { ...u, isEnabled: !currentIsEnabled, status: !currentIsEnabled ? 'Active' : 'Inactive' } : u
+    );
+    setUsers(updatedUsers);
+    setLastInteractedUserId(userId);
+    // In a real app, you'd save this change to the backend here.
+    toast({
+      title: `User ${!currentIsEnabled ? "Enabled" : "Disabled"}`,
+      description: `${updatedUsers.find(u=>u.id === userId)?.username} has been ${!currentIsEnabled ? "enabled" : "disabled"}.`,
+    });
   };
 
   const handleFormSave = (userToSave: User) => {
@@ -55,9 +69,14 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     setLastInteractedUserId(newUserId);
     setIsFormOpen(false);
     setSelectedUser(null);
+    toast({
+      title: selectedUser ? "User Updated" : "User Created",
+      description: `${userToSave.username} has been ${selectedUser ? "updated" : "created"}.`,
+    });
   };
   
-  const getStatusVariant = (status: User['status']) => {
+  const getStatusVariant = (status: User['status'], isEnabled: boolean) => {
+    if (!isEnabled) return 'secondary'; // Visually indicate disabled state
     switch (status) {
       case 'Active':
         return 'default';
@@ -72,59 +91,14 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     }
   };
 
-  const renderDataUsageChart = (user: User) => {
-    const actualUsedGB = Math.min(user.dataUsedGB, user.dataAllowanceGB);
-    const remainingGB = Math.max(0, user.dataAllowanceGB - actualUsedGB);
-    
-    const data = [
-      { name: "Used", value: actualUsedGB },
-      { name: "Remaining", value: remainingGB },
-    ];
-
-    if (user.dataAllowanceGB === 0 && user.dataUsedGB === 0) {
-      return <span className="text-xs text-muted-foreground">N/A</span>;
-    }
-    if (user.dataAllowanceGB === 0 && user.dataUsedGB > 0) {
-       return <span className="text-xs text-destructive">Error</span>;
-    }
-
-
-    return (
-      <div style={{ width: 60, height: 60, margin: 'auto' }}>
-        <ResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={15}
-              outerRadius={25}
-              fill="#8884d8"
-              paddingAngle={2}
-              dataKey="value"
-              stroke="hsl(var(--background))"
-              strokeWidth={2}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--popover))',
-                borderColor: 'hsl(var(--border))',
-                borderRadius: 'var(--radius)',
-                fontSize: '12px',
-                fontFamily: 'var(--font-body)'
-              }}
-              formatter={(value, name) => [`${value} GB`, name]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    );
+  const getKernelName = (kernelId: string) => {
+    return kernelDefinitions.find(k => k.id === kernelId)?.name || kernelId;
   };
-
+  
+  const getProtocolLabel = (kernelId: string, protocolName: string) => {
+    const kernel = kernelDefinitions.find(k => k.id === kernelId);
+    return kernel?.protocols.find(p => p.name === protocolName)?.label || protocolName;
+  };
 
   return (
     <div className="space-y-4">
@@ -138,10 +112,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="font-body">Username</TableHead>
-              <TableHead className="font-body">Full Name</TableHead>
               <TableHead className="font-body">Status</TableHead>
+              <TableHead className="font-body">Kernel</TableHead>
               <TableHead className="font-body">Protocol</TableHead>
-              <TableHead className="font-body text-center">Data Usage</TableHead>
+              <TableHead className="font-body text-center w-[150px]">Data Usage</TableHead>
               <TableHead className="font-body">Expires On</TableHead>
               <TableHead className="font-body text-center">Actions</TableHead>
             </TableRow>
@@ -151,21 +125,40 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               <TableRow 
                 key={user.id}
                 className={cn(
-                  user.id === lastInteractedUserId && "bg-accent/20 hover:bg-accent/30"
+                  user.id === lastInteractedUserId && "bg-accent/20 hover:bg-accent/30",
+                  !user.isEnabled && "opacity-60 hover:opacity-70"
                 )}
               >
-                <TableCell className="font-medium font-body">{user.username}</TableCell>
-                <TableCell className="font-body">{user.fullName}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(user.status)} className="font-body">{user.status}</Badge>
+                <TableCell className="font-medium font-body py-2">
+                  <div>{user.username}</div>
+                  <div className="text-xs text-muted-foreground">{user.fullName}</div>
                 </TableCell>
-                <TableCell className="font-body">{user.protocol}</TableCell>
-                <TableCell className="text-center p-1">{renderDataUsageChart(user)}</TableCell>
-                <TableCell className="font-body">{calculateExpiresOn(user.createdAt, user.validityPeriodDays)}</TableCell>
-                <TableCell className="text-center">
-                  <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
+                <TableCell className="py-2">
+                  <div className="flex items-center space-x-2">
+                     <Switch
+                        id={`enable-user-${user.id}`}
+                        checked={user.isEnabled}
+                        onCheckedChange={() => handleToggleUserEnabled(user.id, user.isEnabled)}
+                        aria-label={`Enable or disable user ${user.username}`}
+                      />
+                    <Badge variant={getStatusVariant(user.status, user.isEnabled)} className="font-body text-xs">{user.status}</Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="font-body py-2">{getKernelName(user.kernelId)}</TableCell>
+                <TableCell className="font-body py-2">{getProtocolLabel(user.kernelId, user.protocol)}</TableCell>
+                <TableCell className="text-center p-2">
+                  <DataUsageBar used={user.dataUsedGB} allowance={user.dataAllowanceGB} />
+                </TableCell>
+                <TableCell className="font-body py-2">{calculateExpiresOn(user.createdAt, user.validityPeriodDays)}</TableCell>
+                <TableCell className="text-center py-2">
+                  <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Edit User">
                     <Edit3 className="h-4 w-4" />
-                    <span className="sr-only">Edit User</span>
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Download Config", description: `Preparing config for ${user.username}...`})} title="Download Config">
+                    <DownloadCloud className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => toast({ title: "Show QR Code", description: `Generating QR code for ${user.username}...`})} title="Show QR Code">
+                    <QrCode className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>
