@@ -8,14 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
-import { initialPanelSettings, DEFAULT_USERNAME_FOR_SETUP } from "@/app/users/user-data"; 
-// LanguageSwitcher and useLanguage removed
+import { Shield, Info } from "lucide-react";
+import { initialPanelSettings, DEFAULT_USERNAME_FOR_SETUP } from "@/app/users/user-data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  // const { t } = useLanguage(); // Removed
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,26 +25,30 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
 
-    if (username === (initialPanelSettings.username === DEFAULT_USERNAME_FOR_SETUP ? DEFAULT_USERNAME_FOR_SETUP : "admin") && password === "password") { 
+    // Check if using default setup username or the standard 'admin'
+    const isDefaultUserLogin = username === DEFAULT_USERNAME_FOR_SETUP;
+    const isAdminLogin = username === "admin";
+
+    if ((isDefaultUserLogin || isAdminLogin) && password === "password") {
       toast({
-        title: "Login Successful", // Reverted from t("login_successful")
-        description: "Welcome back!", // Reverted from t("welcome_back")
+        title: "Login Successful",
+        description: "Welcome to ProtocolPilot!",
       });
-      if (initialPanelSettings.username === DEFAULT_USERNAME_FOR_SETUP) {
+      if (isDefaultUserLogin) {
         toast({
-          title: "Initial Setup Required", // Reverted from t("initial_setup_required")
-          description: "Please change your default username and password in Panel Settings.", // Reverted from t("please_change_credentials")
-          variant: "default",
+          title: "Initial Setup Recommended",
+          description: "Please change your default username and password in Panel Settings for security.",
+          variant: "default", // "default" is often yellow/amber, or use a custom variant if defined
           duration: 7000,
         });
       }
-      router.push("/"); 
+      router.push("/");
     } else {
       toast({
-        title: "Login Failed", // Reverted from t("login_failed")
-        description: "Invalid username or password.", // Reverted from t("invalid_credentials")
+        title: "Login Failed",
+        description: "Invalid username or password.",
         variant: "destructive",
       });
     }
@@ -57,32 +60,46 @@ export default function LoginPage() {
       className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center relative"
       style={{ backgroundImage: `url(${loginPageBackground})` }}
     >
-      <div className="absolute top-4 end-4">
-        {/* LanguageSwitcher removed */}
+      <div className="absolute top-0 inset-x-0 p-4 md:p-8 flex justify-center">
+        <Alert className="max-w-2xl bg-background/80 backdrop-blur-sm shadow-lg">
+          <Info className="h-5 w-5" />
+          <AlertTitle className="font-headline">Welcome to ProtocolPilot Setup!</AlertTitle>
+          <AlertDescription className="font-body space-y-1">
+            <p>
+              If this is your first time running the panel, use the default credentials:
+            </p>
+            <ul className="list-disc list-inside text-sm space-y-0.5 ps-1">
+              <li><strong>Default Username:</strong> <code>{DEFAULT_USERNAME_FOR_SETUP}</code></li>
+              <li><strong>Default Password:</strong> <code>password</code></li>
+            </ul>
+            <p className="mt-1.5">
+              Access the panel via: <code>http://&lt;YOUR_SERVER_IP&gt;:{initialPanelSettings.loginPort}{initialPanelSettings.loginPath}</code>
+            </p>
+            <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-500">
+              <strong>Important:</strong> After your first login, please go to "Panel Settings" to change the default username and password immediately.
+            </p>
+          </AlertDescription>
+        </Alert>
       </div>
-      <Card className="w-full max-w-md shadow-2xl bg-background/80 backdrop-blur-sm">
+
+      <Card className="w-full max-w-md shadow-2xl bg-background/80 backdrop-blur-sm mt-48 sm:mt-56 md:mt-64">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center justify-center">
             <Shield className="h-16 w-16 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-headline">ProtocolPilot Login</CardTitle> {/* Reverted from t('login_title') */}
+          <CardTitle className="text-3xl font-headline">ProtocolPilot Login</CardTitle>
           <CardDescription className="font-body">
-            Access your advanced protocol management panel. {/* Reverted from t('login_description') */}
-            {initialPanelSettings.username === DEFAULT_USERNAME_FOR_SETUP && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                    Default credentials are in use. Please change them in Panel Settings after login. {/* Reverted from t('login_default_creds_warning') */}
-                 </p>
-            )}
+            Access your advanced protocol management panel.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username" className="font-body">Username</Label> {/* Reverted from t('username_label') */}
+              <Label htmlFor="username" className="font-body">Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username" // Reverted from t('enter_username_placeholder')
+                placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -90,11 +107,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="font-body">Password</Label> {/* Reverted from t('password_label') */}
+              <Label htmlFor="password" className="font-body">Password</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password" // Reverted from t('enter_password_placeholder')
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -104,12 +121,12 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full font-body" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"} {/* Reverted from t() calls */}
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
           </CardFooter>
         </form>
-         <p className="text-xs text-center text-muted-foreground p-4 font-body">
-            For demonstration: user `admin` or `{DEFAULT_USERNAME_FOR_SETUP}`, pass `password`. {/* Reverted from t() call */}
+         <p className="text-xs text-center text-muted-foreground px-4 py-2 font-body">
+            (You can also use `admin` / `password` for quick access if default is unchanged.)
           </p>
       </Card>
     </div>
