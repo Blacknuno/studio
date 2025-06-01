@@ -8,6 +8,7 @@ export type KernelProtocol = {
 };
 
 export type KernelStatus = 'Running' | 'Stopped' | 'Error' | 'Starting' | 'Degraded';
+export type KernelCategory = 'engine' | 'node';
 
 export type XrayConfig = {
   logLevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
@@ -107,6 +108,7 @@ export type PsiphonProConfig = {
 export type Kernel = {
   id: string;
   name: string;
+  category: KernelCategory;
   sourceUrl?: string;
   protocols: KernelProtocol[];
   description?: string;
@@ -121,6 +123,7 @@ export const kernels: Kernel[] = [
   {
     id: "xray",
     name: "Xray-core",
+    category: "engine",
     sourceUrl: "https://github.com/XTLS/Xray-core",
     description: "A platform for building proxies to bypass network restrictions. Inbounds/ports typically managed in Panel Settings.",
     protocols: [
@@ -144,6 +147,7 @@ export const kernels: Kernel[] = [
   {
     id: "openvpn",
     name: "OpenVPN",
+    category: "engine",
     sourceUrl: "https://openvpn.net/",
     description: "A robust and highly flexible VPN protocol.",
     protocols: [
@@ -160,6 +164,7 @@ export const kernels: Kernel[] = [
   {
     id: "wireguard",
     name: "WireGuard",
+    category: "engine",
     sourceUrl: "https://www.wireguard.com/",
     description: "An extremely simple yet fast and modern VPN.",
     protocols: [{ name: "udp", label: "UDP" }],
@@ -173,6 +178,7 @@ export const kernels: Kernel[] = [
   {
     id: "sing-box",
     name: "Sing-box",
+    category: "engine",
     sourceUrl: "https://github.com/SagerNet/sing-box",
     description: "A universal proxy platform with extensive protocol support.",
     protocols: [
@@ -192,6 +198,7 @@ export const kernels: Kernel[] = [
   {
     id: "tor-warp",
     name: "Tor Warp Fake Site",
+    category: "node",
     sourceUrl: "https://gitlab.torproject.org/tpo/core/tor",
     description: "Routes traffic through Tor network, potentially with WARP, using a fake site SNI.",
     protocols: [{ name: "tor", label: "Tor Proxy" }],
@@ -208,6 +215,7 @@ export const kernels: Kernel[] = [
   {
     id: "psiphon-pro",
     name: "Psiphon Pro",
+    category: "node",
     sourceUrl: "https://github.com/Psiphon-Inc/psiphon",
     description: "A circumvention tool that utilizes a combination of secure communication and obfuscation technologies.",
     protocols: [{ name: "psiphon", label: "Psiphon VPN" }],
@@ -430,3 +438,5 @@ export const initialPanelSettings: PanelSettingsData = {
   sslCertificate: "-----BEGIN CERTIFICATE-----\nMock Certificate Data...\n-----END CERTIFICATE-----",
   blockedCountries: [],
 };
+
+    

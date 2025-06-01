@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings } from "lucide-react";
+import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server } from "lucide-react";
 import {
   SidebarProvider,
   Sidebar,
@@ -28,6 +28,7 @@ const navItems = [
   { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
   { href: "/users", label: "User Management", icon: UsersRound },
   { href: "/kernels", label: "Kernels", icon: Cpu },
+  { href: "/node-plus", label: "Node+", icon: Server },
   { href: "/panel-settings", label: "Panel Settings", icon: Settings },
 ];
 
@@ -81,3 +82,5 @@ export function AppLayout({ children }: AppLayoutProps) {
     </SidebarProvider>
   );
 }
+
+    
