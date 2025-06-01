@@ -79,7 +79,7 @@ export const filterableCountries: Country[] = [
 
 export type TorWarpFakeSiteConfig = {
   ports: number[];
-  fakeDomain: string;
+  fakeDomain: string; // Used as SNI for Tor traffic
   selectedCountries: string[];
   enableCountrySelection: boolean;
 };
@@ -183,21 +183,21 @@ export const kernels: Kernel[] = [
     } as SingBoxConfig,
   },
   {
-    id: "tor-warp",
-    name: "Tor Warp Fake Site",
-    category: "node",
+    id: "tor-service", // Renamed from "tor-warp" to be more specific for Tor service management
+    name: "Tor Service", // Renamed
+    category: "node", // This will be managed in Node+ as a special service
     sourceUrl: "https://gitlab.torproject.org/tpo/core/tor",
-    description: "Routes traffic through Tor network, potentially with WARP, using a fake site SNI.",
+    description: "Routes traffic through Tor network, potentially with a fake site SNI for camouflage.",
     protocols: [{ name: "tor", label: "Tor Proxy" }],
     status: "Running",
     totalDataUsedGB: 75.3,
     activeConnections: 12,
     config: {
       ports: [9050, 9150],
-      fakeDomain: "speedtest.net",
+      fakeDomain: "www.bing.com", // Default fake domain for SNI
       selectedCountries: ["US", "NL"],
       enableCountrySelection: true,
-    } as TorWarpFakeSiteConfig,
+    } as TorWarpFakeSiteConfig, // Re-using this config structure for Tor
   },
   {
     id: "psiphon-pro",
@@ -317,8 +317,8 @@ export const mockUsers: User[] = [
     fullName: 'Test Tor User',
     email: 'tor.user@example.com',
     status: 'Active',
-    kernelId: 'tor-warp',
-    kernelProfile: 'Tor Warp Standard',
+    kernelId: 'tor-service', // Updated to new Tor service ID
+    kernelProfile: 'Tor Standard Profile',
     protocol: 'tor',
     dataAllowanceGB: 50,
     dataUsedGB: 5,
@@ -326,7 +326,7 @@ export const mockUsers: User[] = [
     validityPeriodDays: 30,
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     isEnabled: true,
-    notes: 'Testing Tor Warp service.',
+    notes: 'Testing Tor service.',
     sublinkPath: 'sub_tortester_zeta321',
   },
 ];
@@ -337,7 +337,8 @@ export function calculateExpiresOn(createdAt: string, validityPeriodDays: number
   return expiresDate.toLocaleDateString();
 }
 
-export type XrayInboundSetting = { // Renaming back as it might be used for ManagedHost context
+// This type might be deprecated if inbounds are managed via Managed Hosts
+export type XrayInboundSetting_DEPRECATED = { 
   id: string;
   tag: string;
   port: number;
@@ -347,6 +348,22 @@ export type XrayInboundSetting = { // Renaming back as it might be used for Mana
   isEnabled: boolean;
 };
 
+export type FakeSiteSettings = {
+  isEnabled: boolean;
+  decoyDomain: string;
+  nginxConfigSnippet: string;
+  isValidated: boolean;
+};
+
+export type WarpServiceSettings = {
+  isEnabled: boolean;
+  // future Warp-specific settings
+};
+
+export type TorServicePanelSettings = {
+    isEnabled: boolean; // Panel-level toggle for the entire Tor service
+};
+
 export type PanelSettingsData = {
   ipAddress: string;
   loginPort: number;
@@ -354,13 +371,17 @@ export type PanelSettingsData = {
   username: string;
   telegramBotToken: string;
   telegramAdminChatId: string;
-  telegramBotUsername?: string; // New field
-  telegramAdminUsername?: string; // New field
+  telegramBotUsername?: string;
+  telegramAdminUsername?: string;
   isTelegramBotConnected: boolean;
   domainName: string;
   sslPrivateKey: string;
   sslCertificate: string;
   blockedCountries: string[];
+  // New service-specific settings
+  fakeSite: FakeSiteSettings;
+  warpService: WarpServiceSettings;
+  torServicePanel: TorServicePanelSettings;
 };
 
 export const initialPanelSettings: PanelSettingsData = {
@@ -377,6 +398,19 @@ export const initialPanelSettings: PanelSettingsData = {
   sslPrivateKey: "-----BEGIN PRIVATE KEY-----\nMock Private Key Data...\n-----END PRIVATE KEY-----",
   sslCertificate: "-----BEGIN CERTIFICATE-----\nMock Certificate Data...\n-----END CERTIFICATE-----",
   blockedCountries: [],
+  fakeSite: {
+    isEnabled: false,
+    decoyDomain: "decoy.example.com",
+    nginxConfigSnippet: `server {\n  listen 443 ssl http2;\n  listen [::]:443 ssl http2;\n  server_name decoy.example.com; # Replace with your decoy domain\n\n  ssl_certificate /etc/ssl/certs/your_fake_cert.pem; # Replace with path to your SSL cert\n  ssl_certificate_key /etc/ssl/private/your_fake_key.key; # Replace with path to your SSL key\n  ssl_protocols TLSv1.2 TLSv1.3;\n  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;\n\n  # Recommended: Add security headers\n  add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;\n  add_header X-Content-Type-Options nosniff always;\n  add_header X-Frame-Options DENY always;\n  add_header X-XSS-Protection "1; mode=block" always;\n  # add_header Content-Security-Policy "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none';" always;\n\n  location / {\n    # Path to your static fake website files\n    root /var/www/html/fake-site; # Replace with the actual path to your fake site content\n    index index.html index.htm;\n    try_files $uri $uri/ =404;\n  }\n\n  # Optional: Custom error pages\n  error_page 404 /404.html;\n  location = /404.html {\n    internal;\n    root /var/www/html/fake-site/error_pages; # Path to custom error pages\n  }\n}`,
+    isValidated: false,
+  },
+  warpService: {
+    isEnabled: false,
+  },
+  torServicePanel: {
+      isEnabled: true, // Tor service itself is enabled by default (managed by kernel.status)
+                      // This panel setting could be for additional panel-level control if needed
+  }
 };
 
 export type ServerNodeStatus = 'Online' | 'Offline' | 'Error' | 'Connecting';
@@ -432,7 +466,7 @@ export type ManagedHost = {
   streamSecurityConfig: string; 
   muxConfig: string; 
   notes?: string;
-  isEnabled: boolean; // Added field
+  isEnabled: boolean;
 };
 
 export const mockManagedHosts: ManagedHost[] = [
@@ -487,5 +521,3 @@ export const mockManagedHosts: ManagedHost[] = [
     isEnabled: false,
   },
 ];
-
-    

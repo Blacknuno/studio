@@ -3,12 +3,16 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { kernels, type KernelStatus } from "@/app/users/user-data"; 
 import { Button } from "@/components/ui/button";
-import { Github, ExternalLink, Settings2, Zap, Users, Database, Power, RefreshCw, Play, Square, ServerIcon } from "lucide-react";
+import { Github, ExternalLink, Settings2, Users, Database, Power, RefreshCw, Play, Square, ServerIcon } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
+
+// THIS COMPONENT IS LIKELY DEPRECATED OR NEEDS REPURPOSING
+// The functionality is being moved into individual tabs on the Node+ page.
+// For now, it will list all 'node' category kernels as a fallback if not handled by specific tabs.
 
 const getStatusBadgeVariant = (status: KernelStatus): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
@@ -46,11 +50,15 @@ const getStatusColorClass = (status: KernelStatus): string => {
 
 export function NodeList() {
   const { toast } = useToast();
+  
+  // Filter for nodes that are not handled by specific tabs (e.g., not 'tor-service')
+  // and are of category 'node'. This component now serves as a fallback.
+  const genericNodeServices = kernels.filter(k => k.id !== 'tor-service' && k.category === 'node');
+  
   const [nodeStatuses, setNodeStatuses] = React.useState<Record<string, KernelStatus>>(
-    kernels.reduce((acc, k) => ({ ...acc, [k.id]: k.status }), {})
+    genericNodeServices.reduce((acc, k) => ({ ...acc, [k.id]: k.status }), {})
   );
 
-  const nodeServices = kernels.filter(k => k.category === 'node');
 
   const handleNodeAction = (nodeId: string, action: "start" | "stop" | "restart") => {
     const nodeName = kernels.find(k => k.id === nodeId)?.name || "Node";
@@ -82,13 +90,13 @@ export function NodeList() {
     });
   };
   
-  if (nodeServices.length === 0) {
-    return <p className="text-muted-foreground font-body text-center">No Node+ services available.</p>;
+  if (genericNodeServices.length === 0) {
+    return <p className="text-muted-foreground font-body text-center py-4">No other generic node services available.</p>;
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {nodeServices.map((node) => (
+      {genericNodeServices.map((node) => (
         <Card key={node.id} className="flex flex-col">
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
@@ -137,7 +145,7 @@ export function NodeList() {
             
             <div className="mt-4">
                  <p className="text-xs text-muted-foreground font-body">
-                    Node-specific settings (e.g., ports, country preferences) are managed via the button below.
+                    Generic node. Settings for this type of node are typically managed via the main Kernels settings page if applicable.
                 </p>
             </div>
           </CardContent>
@@ -183,5 +191,3 @@ export function NodeList() {
     </div>
   );
 }
-
-    
