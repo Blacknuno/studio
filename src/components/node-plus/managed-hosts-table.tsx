@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit3, PlusCircle, Trash2, Globe, Power, PowerOff } from "lucide-react";
+import { Edit3, PlusCircle, Trash2 } from "lucide-react";
 import type { ManagedHost } from "@/app/users/user-data";
 import { mockManagedHosts } from "@/app/users/user-data";
 import { AddHostDialog } from "./add-host-dialog";
@@ -27,6 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added missing import
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
@@ -84,11 +85,16 @@ export function ManagedHostsTable() {
         host.id === hostId ? { ...host, isEnabled: !host.isEnabled } : host
       )
     );
-    const toggledHost = hosts.find(h => h.id === hostId);
-    if (toggledHost) {
+    const toggledHost = hosts.find(h => h.id === hostId); // Find after state update might be tricky with async
+    // For immediate feedback, derive new state:
+    const currentHost = mockManagedHosts.find(h => h.id === hostId); // Assuming mockManagedHosts has the original state or use a temp var
+    const newIsEnabled = !currentHost?.isEnabled;
+
+
+    if (toggledHost) { // Use toggledHost to get the name
         toast({
-            title: `Host ${!toggledHost.isEnabled ? "Enabled" : "Disabled"}`,
-            description: `Host "${toggledHost.name}" is now ${!toggledHost.isEnabled ? "enabled" : "disabled"}.`,
+            title: `Host ${toggledHost.isEnabled ? "Disabled" : "Enabled"}`, // Logic reversed because it shows state *before* click effective in UI
+            description: `Host "${toggledHost.name}" is now ${toggledHost.isEnabled ? "disabled" : "enabled"}.`,
         });
     }
   };
@@ -177,5 +183,3 @@ export function ManagedHostsTable() {
     </div>
   );
 }
-
-    
