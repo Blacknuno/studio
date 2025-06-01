@@ -1,11 +1,43 @@
 
 "use client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { kernels } from "@/app/users/user-data"; 
+import { kernels, type KernelStatus } from "@/app/users/user-data"; 
 import { Button } from "@/components/ui/button";
-import { Github, ExternalLink, Settings2 } from "lucide-react";
+import { Github, ExternalLink, Settings2, Zap, Users, Database } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const getStatusBadgeVariant = (status: KernelStatus): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case "Running":
+      return "default"; // Typically green/primary
+    case "Stopped":
+      return "secondary"; // Gray
+    case "Error":
+      return "destructive"; // Red
+    case "Starting":
+      return "outline"; // Yellowish/Orange - using outline for now as we don't have a direct yellow badge
+    default:
+      return "secondary";
+  }
+};
+
+const getStatusColorClass = (status: KernelStatus): string => {
+    switch (status) {
+      case "Running":
+        return "bg-green-500";
+      case "Stopped":
+        return "bg-gray-500";
+      case "Error":
+        return "bg-red-500";
+      case "Starting":
+        return "bg-yellow-500";
+      default:
+        return "bg-gray-500";
+    }
+}
+
 
 export function KernelList() {
   return (
@@ -13,11 +45,11 @@ export function KernelList() {
       {kernels.map((kernel) => (
         <Card key={kernel.id} className="flex flex-col">
           <CardHeader>
-            <CardTitle className="font-headline flex items-center justify-between">
-              <span className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="font-headline flex items-center gap-2">
                 <Settings2 className="h-6 w-6 text-primary" /> 
                 {kernel.name}
-              </span>
+              </CardTitle>
               {kernel.sourceUrl && (
                 <Link href={kernel.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${kernel.name} source link`}>
                   <Button variant="ghost" size="icon">
@@ -25,12 +57,18 @@ export function KernelList() {
                   </Button>
                 </Link>
               )}
-            </CardTitle>
+            </div>
+             <div className="flex items-center space-x-2">
+                <span className={cn("h-3 w-3 rounded-full", getStatusColorClass(kernel.status))} />
+                <Badge variant={getStatusBadgeVariant(kernel.status)} className="font-body text-xs">
+                  {kernel.status}
+                </Badge>
+            </div>
             {kernel.description && (
-                 <CardDescription className="font-body text-sm">{kernel.description}</CardDescription>
+                 <CardDescription className="font-body text-sm pt-1">{kernel.description}</CardDescription>
             )}
           </CardHeader>
-          <CardContent className="flex-grow">
+          <CardContent className="flex-grow space-y-4">
             <div className="space-y-2">
                 <h4 className="font-medium font-body text-sm">Supported Protocols:</h4>
                 <div className="flex flex-wrap gap-2">
@@ -39,18 +77,29 @@ export function KernelList() {
                     ))}
                 </div>
             </div>
+
+            <div className="space-y-2 text-sm font-body">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Database className="h-4 w-4" />
+                    <span>Data Transferred: <span className="font-semibold text-foreground">{kernel.totalDataUsedGB.toFixed(1)} GB</span></span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Active Connections: <span className="font-semibold text-foreground">{kernel.activeConnections}</span></span>
+                </div>
+            </div>
+            
             <div className="mt-4">
                  <p className="text-xs text-muted-foreground font-body">
-                    {/* Placeholder for kernel-specific settings overview or description */}
-                    Specific settings for this kernel can be managed here.
-                    {kernel.name === "Xray-core" && " (e.g., compatible with 3x-ui panel configurations)"}
+                    Kernel-specific settings (e.g., DNS, routing, advanced parameters) are managed via the button below.
+                    {kernel.name === "Xray-core" && " These can include configurations compatible with 3x-ui panel."}
                 </p>
             </div>
           </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full font-body" disabled>
               <ExternalLink className="mr-2 h-4 w-4" />
-              Configure Settings (Coming Soon)
+              Manage Core Settings (Coming Soon)
             </Button>
           </CardFooter>
         </Card>

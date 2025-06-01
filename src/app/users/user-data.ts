@@ -7,12 +7,17 @@ export type KernelProtocol = {
   label: string; // e.g., "VLESS"
 };
 
+export type KernelStatus = 'Running' | 'Stopped' | 'Error' | 'Starting';
+
 export type Kernel = {
   id: string; // e.g., "xray"
   name: string; // e.g., "Xray-core"
   sourceUrl?: string;
   protocols: KernelProtocol[];
   description?: string;
+  status: KernelStatus;
+  totalDataUsedGB: number;
+  activeConnections: number;
 };
 
 export const kernels: Kernel[] = [
@@ -29,6 +34,9 @@ export const kernels: Kernel[] = [
       { name: "http", label: "HTTP/HTTPS" },
       { name: "socks", label: "SOCKS5" },
     ],
+    status: "Running",
+    totalDataUsedGB: 1250.7,
+    activeConnections: 150,
   },
   {
     id: "openvpn",
@@ -39,6 +47,9 @@ export const kernels: Kernel[] = [
         { name: "udp", label: "UDP" },
         { name: "tcp", label: "TCP" }
     ],
+    status: "Running",
+    totalDataUsedGB: 870.2,
+    activeConnections: 75,
   },
   {
     id: "wireguard",
@@ -46,6 +57,9 @@ export const kernels: Kernel[] = [
     sourceUrl: "https://www.wireguard.com/",
     description: "An extremely simple yet fast and modern VPN.",
     protocols: [{ name: "udp", label: "UDP" }],
+    status: "Stopped",
+    totalDataUsedGB: 320.5,
+    activeConnections: 0,
   },
   {
     id: "sing-box",
@@ -62,6 +76,9 @@ export const kernels: Kernel[] = [
         { name: "shadowsocks", label: "Shadowsocks" },
         { name: "naive", label: "NaiveProxy" },
     ],
+    status: "Error",
+    totalDataUsedGB: 50.1,
+    activeConnections: 5,
   },
 ];
 
