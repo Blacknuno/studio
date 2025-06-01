@@ -13,18 +13,9 @@ export type KernelCategory = 'engine' | 'node';
 export type XrayConfig = {
   logLevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
   dnsServers: string[];
-  inbounds: Array<{
-    tag: string;
-    port: number;
-    protocol: string;
-    settings?: Record<string, any>;
-    streamSettings?: Record<string, any>;
-  }>;
-  outbounds: Array<{
-    tag: string;
-    protocol: string;
-    settings?: Record<string, any>;
-  }>;
+  // Inbounds and outbounds for Xray are now generally managed via Managed Hosts or global panel settings
+  // For direct kernel config, these could be simple JSON strings or more structured if needed later.
+  rawConfig?: string; // Placeholder for full raw config if needed
 };
 
 export type OpenVPNConfig = {
@@ -58,8 +49,8 @@ export type SingBoxConfig = {
     servers: string[];
     strategy?: string;
   };
-  inbounds: Array<Record<string, any>>;
-  outbounds: Array<Record<string, any>>;
+  // Inbounds and outbounds for SingBox are now generally managed via Managed Hosts or global panel settings
+  rawConfig?: string; // Placeholder for full raw config if needed later
 };
 
 export type Country = {
@@ -125,7 +116,7 @@ export const kernels: Kernel[] = [
     name: "Xray-core",
     category: "engine",
     sourceUrl: "https://github.com/XTLS/Xray-core",
-    description: "A platform for building proxies to bypass network restrictions. Inbounds/ports typically managed in Panel Settings.",
+    description: "A platform for building proxies. Detailed inbound/outbound configs via Managed Hosts or Panel Settings.",
     protocols: [
       { name: "vless", label: "VLESS" },
       { name: "vmess", label: "VMess" },
@@ -140,8 +131,7 @@ export const kernels: Kernel[] = [
     config: {
       logLevel: 'info',
       dnsServers: ['1.1.1.1', '8.8.8.8'],
-      inbounds: [], 
-      outbounds: [ { tag: 'direct', protocol: 'freedom', settings: {}} ],
+      rawConfig: JSON.stringify({ outbounds: [ { tag: 'direct', protocol: 'freedom', settings: {}} ] }, null, 2),
     } as XrayConfig,
   },
   {
@@ -180,7 +170,7 @@ export const kernels: Kernel[] = [
     name: "Sing-box",
     category: "engine",
     sourceUrl: "https://github.com/SagerNet/sing-box",
-    description: "A universal proxy platform with extensive protocol support.",
+    description: "A universal proxy platform. Detailed inbound/outbound configs via Managed Hosts or Panel Settings.",
     protocols: [
         { name: "hysteria2", label: "Hysteria2" },
         { name: "tuic", label: "TUIC v5" },
@@ -192,7 +182,7 @@ export const kernels: Kernel[] = [
     totalDataUsedGB: 50.1,
     activeConnections: 5,
     config: {
-      logLevel: 'info', dns: { servers: ['1.1.1.1'] }, inbounds: [], outbounds: []
+      logLevel: 'info', dns: { servers: ['1.1.1.1'] }, rawConfig: JSON.stringify({ outbounds: [] }, null, 2)
     } as SingBoxConfig,
   },
   {
@@ -351,7 +341,8 @@ export function calculateExpiresOn(createdAt: string, validityPeriodDays: number
 }
 
 
-export type XrayInboundSetting = {
+// This type might become obsolete if Xray Inbounds are managed globally differently.
+export type XrayInboundSetting_DEPRECATED = {
   id: string;
   tag: string;
   port: number;
@@ -366,7 +357,7 @@ export type PanelSettingsData = {
   loginPort: number;
   loginPath: string;
   username: string;
-  xrayInbounds: XrayInboundSetting[];
+  // xrayInbounds removed as per request
   telegramBotToken: string;
   telegramAdminChatId: string;
   isTelegramBotConnected: boolean;
@@ -381,55 +372,7 @@ export const initialPanelSettings: PanelSettingsData = {
   loginPort: 2053,
   loginPath: "/paneladmin",
   username: "admin",
-  xrayInbounds: [
-    {
-      id: "inbound_1",
-      tag: "VLESS-WS-TLS",
-      port: 443,
-      protocol: "vless",
-      settings: JSON.stringify({
-        clients: [{ id: "your-uuid-here", alterId: 0, email: "user1@example.com" }],
-        decryption: "none",
-      }, null, 2),
-      streamSettings: JSON.stringify({
-        network: "ws",
-        security: "tls",
-        tlsSettings: { serverName: "yourdomain.com", certificates: [{ certificateFile: "/path/to/cert.pem", keyFile: "/path/to/key.pem" }] },
-        wsSettings: { path: "/vless" },
-      }, null, 2),
-      isEnabled: true,
-    },
-    {
-      id: "inbound_2",
-      tag: "VMess-TCP",
-      port: 8080,
-      protocol: "vmess",
-      settings: JSON.stringify({
-        clients: [{ id: "another-uuid-here", alterId: 0, email: "user2@example.com" }],
-      }, null, 2),
-      streamSettings: JSON.stringify({
-        network: "tcp",
-      }, null, 2),
-      isEnabled: false,
-    },
-     {
-      id: "inbound_3",
-      tag: "VLESS-GRPC-TLS",
-      port: 2087,
-      protocol: "vless",
-      settings: JSON.stringify({
-        clients: [{ "id": "your-grpc-uuid", "flow": "xtls-rprx-vision" }],
-        decryption: "none",
-      }, null, 2),
-      streamSettings: JSON.stringify({
-        network: "grpc",
-        security: "tls",
-        grpcSettings: { serviceName: "vlessgrpc" },
-        tlsSettings: { serverName: "yourdomain.com" }
-      }, null, 2),
-      isEnabled: true,
-    },
-  ],
+  // xrayInbounds removed
   telegramBotToken: "",
   telegramAdminChatId: "",
   isTelegramBotConnected: false,
@@ -481,3 +424,69 @@ export const mockServerNodes: ServerNode[] = [
     status: "Online",
   }
 ];
+
+// New ManagedHost Type
+export type ManagedHost = {
+  id: string;
+  name: string; 
+  hostName: string; 
+  address: string; 
+  port: number;
+  networkConfig: string; 
+  streamSecurityConfig: string; 
+  muxConfig: string; 
+  notes?: string;
+};
+
+export const mockManagedHosts: ManagedHost[] = [
+  {
+    id: "host_1",
+    name: "VLESS WS CDN Host",
+    hostName: "cdn.mydomain.com",
+    address: "104.18.32.100", // Example CDN IP
+    port: 443,
+    networkConfig: JSON.stringify(
+      {
+        network: "ws",
+        wsSettings: {
+          path: "/vlesspath",
+          headers: { Host: "cdn.mydomain.com" },
+        },
+      }, null, 2),
+    streamSecurityConfig: JSON.stringify(
+      {
+        security: "tls",
+        tlsSettings: {
+          serverName: "cdn.mydomain.com",
+          allowInsecure: false,
+        },
+      }, null, 2),
+    muxConfig: JSON.stringify({ enabled: true, concurrency: 8 }, null, 2),
+    notes: "Primary VLESS over WebSocket with CDN fronting.",
+  },
+  {
+    id: "host_2",
+    name: "Trojan gRPC Backend",
+    hostName: "direct.backend.net",
+    address: "172.16.0.10", // Example internal IP
+    port: 2087,
+    networkConfig: JSON.stringify(
+      {
+        network: "grpc",
+        grpcSettings: {
+          serviceName: "trojangrpc",
+        },
+      }, null, 2),
+    streamSecurityConfig: JSON.stringify(
+      {
+        security: "tls",
+        tlsSettings: {
+          serverName: "direct.backend.net",
+        },
+      }, null, 2),
+    muxConfig: JSON.stringify({ enabled: false }, null, 2),
+    notes: "Direct Trojan gRPC service for specific applications.",
+  },
+];
+
+    
