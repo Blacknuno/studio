@@ -106,6 +106,9 @@ export type Kernel = {
   totalDataUsedGB: number;
   activeConnections: number;
   config?: XrayConfig | OpenVPNConfig | WireGuardConfig | SingBoxConfig | TorKernelConfig | PsiphonProConfig;
+  isInstalled: boolean; // Added: To indicate if the core is (mock) installed
+  version?: string; // Added: To store mock version
+  installationPrerequisites?: string;
 };
 
 
@@ -127,6 +130,8 @@ export const kernels: Kernel[] = [
     status: "Running",
     totalDataUsedGB: 1250.7,
     activeConnections: 150,
+    isInstalled: true,
+    version: "1.8.4 (Mock)",
     config: {
       logLevel: 'info',
       dnsServers: ['1.1.1.1', '8.8.8.8'],
@@ -146,6 +151,9 @@ export const kernels: Kernel[] = [
     status: "Running",
     totalDataUsedGB: 870.2,
     activeConnections: 75,
+    isInstalled: true,
+    version: "2.6.x (Mock)",
+    installationPrerequisites: "Requires 'openvpn' package on server.",
     config: {
       port: 1194, proto: 'udp', cipher: 'AES-256-GCM', auth: 'SHA256', dev: 'tun', serverIp: '10.8.0.1', serverNetmask: '255.255.255.0', additionalDirectives: "# Custom OpenVPN directives here"
     } as OpenVPNConfig,
@@ -157,9 +165,12 @@ export const kernels: Kernel[] = [
     sourceUrl: "https://www.wireguard.com/",
     description: "An extremely simple yet fast and modern VPN.",
     protocols: [{ name: "udp", label: "UDP" }],
-    status: "Stopped",
+    status: "Stopped", // Changed to Stopped to test UI for non-running but installed cores
     totalDataUsedGB: 320.5,
     activeConnections: 0,
+    isInstalled: true,
+    version: "1.0.x (Mock)",
+    installationPrerequisites: "Requires 'wireguard' package on server.",
     config: {
       privateKey: 'GENERATED_SERVER_PRIVATE_KEY', address: '10.0.0.1/24', listenPort: 51820, dnsServers: ['1.1.1.1'], peers: []
     } as WireGuardConfig,
@@ -180,6 +191,8 @@ export const kernels: Kernel[] = [
     status: "Error",
     totalDataUsedGB: 50.1,
     activeConnections: 5,
+    isInstalled: true,
+    version: "1.8.0 (Mock)",
     config: {
       logLevel: 'info', dns: { servers: ['1.1.1.1'] }, rawConfig: JSON.stringify({ outbounds: [] }, null, 2)
     } as SingBoxConfig,
@@ -194,6 +207,8 @@ export const kernels: Kernel[] = [
     status: "Running",
     totalDataUsedGB: 75.3,
     activeConnections: 12,
+    isInstalled: true,
+    version: "0.4.x (Mock)",
     config: {
       ports: [9050, 9150],
       fakeDomain: "www.bing.com", 
@@ -211,6 +226,8 @@ export const kernels: Kernel[] = [
     status: "Degraded",
     totalDataUsedGB: 120.9,
     activeConnections: 25,
+    isInstalled: true,
+    version: "Internal Build (Mock)",
     config: {
       ports: [1080, 8081],
       transportMode: 'OBFUSCATED_SSH',
@@ -248,23 +265,13 @@ export type User = {
   };
 };
 
-export const mockUsers: User[] = []; // Start with an empty user list as per requirement
+export const mockUsers: User[] = []; // Start with an empty user list
 
 export function calculateExpiresOn(createdAt: string, validityPeriodDays: number): string {
   const createdDate = new Date(createdAt);
   const expiresDate = new Date(createdDate.setDate(createdDate.getDate() + validityPeriodDays));
   return expiresDate.toLocaleDateString();
 }
-
-export type XrayInboundSetting_DEPRECATED = { 
-  id: string;
-  tag: string;
-  port: number;
-  protocol: 'vless' | 'vmess' | 'trojan' | 'shadowsocks' | 'http' | 'socks';
-  settings: string; 
-  streamSettings: string; 
-  isEnabled: boolean;
-};
 
 export type FakeSiteSettings = {
   isEnabled: boolean;
@@ -314,11 +321,14 @@ export type PanelSettingsData = {
   warpService: WarpServiceSettings;
   torServicePanel: TorServicePanelSettings;
   loginPageBackgroundImageUrl?: string; 
+  kernelsConfig?: { // Added for storing default kernel configs for reset
+    torService?: TorKernelConfig;
+    psiphonPro?: PsiphonProConfig;
+  };
 };
 
-export const DEFAULT_USERNAME_FOR_SETUP = "admin"; // Matches install.sh DEFAULT_USER
+export const DEFAULT_USERNAME_FOR_SETUP = "admin";
 
-// These are the pristine default values for settings that can be reset.
 export const defaultInitialPanelSettings: Readonly<PanelSettingsData> = Object.freeze({
   ipAddress: "N/A (Set by server .env)", 
   loginPort: 3000, 
@@ -347,10 +357,24 @@ export const defaultInitialPanelSettings: Readonly<PanelSettingsData> = Object.f
       isEnabled: true, 
   },
   loginPageBackgroundImageUrl: "https://placehold.co/1920x1080.png", 
+  kernelsConfig: { // Define default kernel configurations here for reset
+    torService: {
+      ports: [9050, 9150],
+      fakeDomain: "www.bing.com",
+      selectedCountries: ["US", "NL"],
+      enableCountrySelection: true,
+    },
+    psiphonPro: {
+      ports: [1080, 8081],
+      transportMode: 'OBFUSCATED_SSH',
+      selectedCountries: ["CA", "DE", "GB"],
+      enableCountrySelection: true,
+      customServerList: "",
+      bandwidthLimitMbps: 10,
+    },
+  },
 });
 
-// This is the mutable state that the panel UI interacts with.
-// It's initialized from defaultInitialPanelSettings but can be changed by "Save Settings" actions.
 export let initialPanelSettings: PanelSettingsData = JSON.parse(JSON.stringify(defaultInitialPanelSettings));
 
 
@@ -459,9 +483,4 @@ export type XrayInboundSetting = {
   streamSettings: string; 
   isEnabled: boolean;
 };
-// Initialize initialPanelSettings.xrayInbounds if it was intended to be part of PanelSettingsData
-// This was removed earlier but if XrayInboundsCard is to be used, it needs a source.
-// For now, assuming it's not part of the core `initialPanelSettings` directly.
-// If you need the XrayInboundsCard functional, we'd add an `xrayInbounds: XrayInboundSetting[]` to PanelSettingsData
-// and initialize it in defaultInitialPanelSettings, e.g., xrayInbounds: []
     
