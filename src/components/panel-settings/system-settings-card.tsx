@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { initialPanelSettings, DEFAULT_USERNAME_FOR_SETUP } from "@/app/users/user-data";
 import { ChangeUsernameDialog } from "./change-username-dialog";
 import { ChangePasswordDialog } from "./change-password-dialog";
-import { Info, Edit2, Image as ImageIcon, AlertTriangle } from "lucide-react";
+import { Info, Edit2, Image as ImageIcon, AlertTriangle, Server } from "lucide-react";
 import Image from "next/image"; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -36,13 +36,13 @@ export function SystemSettingsCard() {
     console.log("Saving system settings:", { loginPort, loginPath });
     toast({
       title: "System Settings Saved",
-      description: "Login port and path have been updated (mocked).",
+      description: "Login port and path have been updated (mocked). Changes may require app restart or reverse proxy update to take effect.",
     });
   };
 
   const handleUsernameChange = (newUsername: string) => {
     setCurrentUsername(newUsername);
-    initialPanelSettings.username = newUsername;
+    initialPanelSettings.username = newUsername; // Mock save
     toast({
       title: "Username Changed",
       description: `Username updated to ${newUsername} (mocked).`,
@@ -59,13 +59,15 @@ export function SystemSettingsCard() {
         title: "Login Background Updated",
         description: "Background image has been (mock) updated. Preview changed.",
       });
-      // Consider revoking object URL if it's purely for local preview and not persisted
-      // URL.revokeObjectURL(mockNewUrl); // This would be done if the image is uploaded and a real URL is received
     }
   };
 
-
-  const isDefaultCredentials = currentUsername === DEFAULT_USERNAME_FOR_SETUP;
+  // The install script now sets username to "admin".
+  // DEFAULT_USERNAME_FOR_SETUP was "admin_please_change".
+  // We should check if currentUsername is "admin" and it hasn't been changed from the initialPanelSettings.username
+  // This is tricky without knowing if it's the *first* time or just happens to be "admin".
+  // A simpler check: if currentUsername from panel settings is "admin".
+  const isPotentiallyDefaultUsername = currentUsername === "admin";
 
 
   return (
@@ -78,30 +80,30 @@ export function SystemSettingsCard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {isDefaultCredentials && (
+          {isPotentiallyDefaultUsername && ( // Show if username is "admin"
             <Alert variant="destructive" className="mb-6">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle className="font-headline">Initial Setup Required</AlertTitle>
+              <AlertTitle className="font-headline">Default Admin Username In Use</AlertTitle>
               <AlertDescription className="font-body">
-                The panel is using default administrator credentials. For security, please change your <strong>username</strong> and <strong>password</strong> immediately.
+                The panel administrator username is currently 'admin'. For enhanced security, please consider changing the <strong>username</strong> and ensure you have a strong <strong>password</strong>.
               </AlertDescription>
             </Alert>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="ipAddress" className="font-body flex items-center">
-              <Info className="h-4 w-4 mr-2 text-muted-foreground" />
-              Panel IP Address (Read-only)
+              <Server className="h-4 w-4 mr-2 text-muted-foreground" />
+              Server IP Address (from .env)
             </Label>
-            <Input id="ipAddress" value={initialPanelSettings.ipAddress} readOnly className="font-body" />
+            <Input id="ipAddress" value={initialPanelSettings.ipAddress} readOnly className="font-body bg-muted cursor-not-allowed" />
             <p className="text-xs text-muted-foreground font-body">
-              This is typically the IP address of your server.
+              This IP is typically detected by the server on startup. Displayed here for reference.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="loginPort" className="font-body">Login Port</Label>
+              <Label htmlFor="loginPort" className="font-body">Panel Login Port</Label>
               <Input
                 id="loginPort"
                 type="number"
@@ -109,16 +111,22 @@ export function SystemSettingsCard() {
                 onChange={(e) => setLoginPort(parseInt(e.target.value, 10) || 0)}
                 className="font-body"
               />
+               <p className="text-xs text-muted-foreground font-body">
+                Port the application listens on (e.g., 3000). Reverse proxy may map this to 80/443.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="loginPath" className="font-body">Login Path</Label>
+              <Label htmlFor="loginPath" className="font-body">Panel Login Path</Label>
               <Input
                 id="loginPath"
                 value={loginPath}
                 onChange={(e) => setLoginPath(e.target.value)}
                 className="font-body"
-                placeholder="/admin"
+                placeholder="/paneladmin"
               />
+               <p className="text-xs text-muted-foreground font-body">
+                Path to access the login page (e.g., /paneladmin).
+              </p>
             </div>
           </div>
           <div className="flex justify-end">
@@ -156,7 +164,7 @@ export function SystemSettingsCard() {
                 <div className="space-y-4">
                     <div>
                         <Label className="font-body">Current Background Preview:</Label>
-                        <div className="mt-2 w-full aspect-video max-w-sm rounded-md border bg-muted overflow-hidden">
+                        <div className="mt-2 w-full aspect-[16/9] max-w-sm rounded-md border bg-muted overflow-hidden">
                              <Image
                                 src={loginBgUrl}
                                 alt="Login background preview"
@@ -180,7 +188,7 @@ export function SystemSettingsCard() {
                             />
                         </div>
                         <p className="text-xs text-muted-foreground font-body mt-1">
-                            Select an image (recommended 1920x1080px) to use as the background for the login page. (Mock upload)
+                            Recommended: 1920x1080px. (Mock upload - preview changes locally)
                         </p>
                     </div>
                 </div>
@@ -202,3 +210,5 @@ export function SystemSettingsCard() {
     </>
   );
 }
+
+    

@@ -1,263 +1,196 @@
-
 #!/bin/bash
-# ProtocolPilot Automated Installer for Ubuntu
-# This script automates the deployment of the ProtocolPilot Next.js application.
+# ProtocolPilot Installation Script (Fixed Version)
 
-# --- BEGIN USER CONFIGURATION ---
-# IMPORTANT: This script is pre-configured for a specific repository.
-# If you need to install a different application, this URL must be changed.
-
-APP_REPO_URL="https://github.com/Blacknuno/studio.git" # <<< Pre-configured Repository URL >>>
-
-# Optional: Define the directory name for the application and where it will be installed.
+# Configuration
+APP_REPO_URL="https://github.com/Blacknuno/studio.git"
 APP_DIR_NAME="protocolpilot"
-INSTALL_PATH="$HOME/$APP_DIR_NAME" # Install in user's home directory by default. If run as root, $HOME is /root.
-# --- END USER CONFIGURATION ---
+INSTALL_PATH="$HOME/$APP_DIR_NAME"
+DEFAULT_USER="admin"
+DEFAULT_PASS=$(openssl rand -base64 12) # Generate random password
 
-
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-echo "🚀 Starting ProtocolPilot Automated Installation..."
+echo "🚀 Starting ProtocolPilot Installation..."
 
 # --- Helper Functions ---
-print_step() {
+show_step() {
     echo ""
     echo "------------------------------------"
     echo "➡️  $1"
     echo "------------------------------------"
 }
 
-print_success() {
-    echo "✅ $1"
-}
-
-print_warning() {
-    echo "⚠️  $1"
-}
-
-print_info() {
-    echo "ℹ️ $1"
-}
-
-# --- Validate Configuration ---
-print_step "Validating script configuration..."
-if [ "$APP_REPO_URL" == "https://github.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO.git" ] || [ -z "$APP_REPO_URL" ]; then
-    print_warning "CRITICAL: The APP_REPO_URL in the installation script is still a placeholder or empty."
-    print_warning "This script should be pre-configured. If you see this message, the script needs to be updated with the correct repository URL."
-    exit 1
-fi
-if [[ ! "$APP_REPO_URL" =~ ^https://github\.com/.+\.git$ ]]; then
-    print_warning "CRITICAL: The APP_REPO_URL ('$APP_REPO_URL') does not look like a valid GitHub HTTPS clone URL."
-    print_warning "It should be in the format: https://github.com/username/repository.git"
-    print_warning "Please check the APP_REPO_URL variable in the script."
-    exit 1
-fi
-print_success "Script configuration is valid. Using Repository URL: $APP_REPO_URL"
-
-
-# --- Prerequisites and Setup ---
-print_step "Updating system packages..."
-sudo apt update
-sudo apt upgrade -y
-print_success "System packages updated."
-
-print_step "Installing essential dependencies (git, curl, nginx)..."
-sudo apt install -y git curl wget unzip nginx
-print_success "Essential dependencies installed. Git version: $(git --version)"
-
-# --- Node.js and npm Installation (via nvm) ---
-print_step "Installing Node Version Manager (nvm) and Node.js LTS..."
-if [ -d "$HOME/.nvm" ]; then
-    print_info "NVM already installed. Sourcing NVM..."
-else
-    print_info "Downloading and installing NVM..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-fi
-
-# Source nvm to make it available in the current script session
-export NVM_DIR="$HOME/.nvm"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-    \. "$NVM_DIR/nvm.sh" # Source NVM
-    print_success "NVM sourced."
-else
-    print_warning "NVM script not found at $NVM_DIR/nvm.sh. Node.js/npm installation might fail."
-    exit 1
-fi
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-# Check if Node.js is already installed or install LTS
-if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-    print_info "Node.js ($(node -v)) and npm ($(npm -v)) are already installed and in PATH."
-else
-    print_info "Installing Node.js LTS via nvm..."
-    nvm install --lts
-    # nvm use --lts # This is usually done by nvm install automatically for the current session
-    nvm alias default 'lts/*' # Set default node version for new shells
-    print_success "Node.js LTS ($(node -v)) and npm ($(npm -v)) installed via nvm."
-fi
-print_info "Using Node version: $(node -v)"
-print_info "Using npm version: $(npm -v)"
-print_info "npm path: $(which npm)"
-
-
-# --- PM2 Installation ---
-print_step "Installing PM2 process manager globally..."
-if command -v pm2 >/dev/null 2>&1; then
-    print_info "PM2 is already installed: $(pm2 --version)"
-else
-    print_info "Attempting to install PM2 globally using sudo and nvm's npm..."
-    if [ -f "$NVM_DIR/versions/node/$(nvm current)/bin/npm" ]; then
-        sudo "$NVM_DIR/versions/node/$(nvm current)/bin/npm" install pm2 -g
-        print_success "PM2 installation command executed."
-        if command -v pm2 >/dev/null 2>&1; then
-            print_success "PM2 is now installed: $(pm2 --version)"
-            print_info "PM2 path: $(which pm2)"
+# --- Fix npm path for sudo ---
+fix_npm_path() {
+    if ! sudo npm -v &> /dev/null; then
+        echo "Configuring npm path for sudo..."
+        if command -v npm &> /dev/null && command -v node &> /dev/null; then
+            sudo ln -sf "$(which npm)" /usr/local/bin/npm
+            sudo ln -sf "$(which node)" /usr/local/bin/node
+            export PATH="$PATH:/usr/local/bin" # For current session
+            echo "npm and node links created in /usr/local/bin"
         else
-            print_warning "PM2 installation seems to have failed. 'pm2' command not found."
-            print_warning "Please check for errors above. You might need to manually install PM2 or adjust your PATH."
-            exit 1
+            echo "⚠️ WARNING: npm or node not found in user PATH. Sudo npm might fail."
         fi
     else
-        print_warning "Could not find nvm's npm path. PM2 installation might fail or use system npm."
-        sudo npm install pm2 -g # Fallback, might not use nvm's node
-        if command -v pm2 >/dev/null 2>&1; then
-             print_success "PM2 is now installed (using fallback method): $(pm2 --version)"
-        else
-            print_warning "PM2 installation failed using fallback. 'pm2' command not found."
-            exit 1
-        fi
+        echo "npm path for sudo seems OK."
     fi
+}
+
+# --- System Preparation ---
+show_step "System Preparation"
+sudo apt update
+sudo apt install -y git curl wget
+
+# --- Node.js Installation ---
+if ! command -v node &> /dev/null; then
+    show_step "Installing Node.js (LTS)"
+    # Using Nodesource is generally more reliable than older distro versions
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+else
+    echo "Node.js is already installed: $(node -v)"
 fi
 
+# --- npm Fix (Run after Node.js ensures npm is available) ---
+fix_npm_path
 
-# --- Clone Application ---
-print_step "Cloning ProtocolPilot application from $APP_REPO_URL into $INSTALL_PATH..."
-if [ -d "$INSTALL_PATH" ]; then
-    print_warning "Directory $INSTALL_PATH already exists. Removing and re-cloning for a fresh install..."
-    sudo rm -rf "$INSTALL_PATH"
-fi
-git clone "$APP_REPO_URL" "$INSTALL_PATH"
-cd "$INSTALL_PATH"
-print_success "Application cloned to $INSTALL_PATH. Current directory: $(pwd)"
-print_info "Files in $INSTALL_PATH:"
-ls -la
-
-
-# --- Install Application Dependencies ---
-print_step "Installing application dependencies (npm install)..."
-# Ensure npm uses the nvm-installed Node.js (already sourced, but good to be explicit with PATH for this step)
-export PATH="$NVM_DIR/versions/node/$(nvm current)/bin:$PATH"
-npm install
-print_success "Application dependencies installed."
-
-
-# --- Build Application ---
-print_step "Building ProtocolPilot application (npm run build)..."
-npm run build
-print_success "Application built successfully."
-
-
-# --- Setup PM2 ---
-print_step "Setting up ProtocolPilot with PM2..."
-PM2_PATH=$(command -v pm2)
-if [ -z "$PM2_PATH" ]; then
-    print_warning "PM2 command not found after installation. Cannot proceed with PM2 setup."
+# --- PM2 Installation ---
+show_step "Installing PM2 globally"
+if sudo npm install -g pm2; then
+    echo "✅ PM2 installed successfully."
+else
+    echo "⚠️ PM2 installation failed. Please check npm/Node.js setup."
     exit 1
 fi
 
-print_info "Using PM2 from: $PM2_PATH"
 
-if "$PM2_PATH" list | grep -q "$APP_DIR_NAME"; then
-    print_info "Application '$APP_DIR_NAME' is already managed by PM2. Restarting..."
-    "$PM2_PATH" restart "$APP_DIR_NAME" --update-env
+# --- Application Setup ---
+show_step "Cloning Repository: $APP_REPO_URL"
+if [ -d "$INSTALL_PATH" ]; then
+    echo "Removing existing application directory: $INSTALL_PATH"
+    sudo rm -rf "$INSTALL_PATH"
+fi
+if git clone "$APP_REPO_URL" "$INSTALL_PATH"; then
+    echo "✅ Repository cloned successfully to $INSTALL_PATH"
 else
-    print_info "Starting application '$APP_DIR_NAME' with PM2..."
-    "$PM2_PATH" start npm --name "$APP_DIR_NAME" -- run start
-    print_success "Application started with PM2."
+    echo "⚠️ Failed to clone repository. Please check URL and network."
+    exit 1
 fi
 
-print_step "Configuring PM2 to start on system boot..."
-CURRENT_USER=$(whoami)
-NODE_BIN_PATH="$NVM_DIR/versions/node/$(nvm current)/bin"
+cd "$INSTALL_PATH"
+echo "Changed directory to $(pwd)"
 
-PM2_STARTUP_CMD_OUTPUT=$("$PM2_PATH" startup systemd -u "$CURRENT_USER" --hp "$HOME" | grep 'sudo env PATH')
+# Create environment file with real system data
+SERVER_IP=$(hostname -I | awk '{print $1}')
+# Ensure .env file has correct permissions if needed, though typically app reads it.
+show_step "Creating .env file"
+cat > .env <<EOL
+# This file is automatically generated by install.sh
+# For frontend, these are typically build-time or server-side rendered.
+# For this prototype, it serves as a reference for what the server provides.
+# The Next.js app itself does not directly read this .env file in production by default
+# without specific configuration (e.g. NEXT_PUBLIC_ prefix or custom server).
 
+# Information for the admin:
+PANEL_LOGIN_PORT=3000
+PANEL_ADMIN_USER=$DEFAULT_USER
+PANEL_ADMIN_PASS=$DEFAULT_PASS
+SERVER_PUBLIC_IP=$SERVER_IP
+
+# Variables for potential future backend use or if app is configured to read them
+# NEXT_PUBLIC_REAL_IP=$SERVER_IP
+# NEXT_PUBLIC_PORT=3000
+EOL
+echo ".env file created."
+cat .env # Show content for verification
+
+show_step "Installing Application Dependencies (npm install)"
+if npm install; then
+    echo "✅ Application dependencies installed."
+else
+    echo "⚠️ Failed to install application dependencies."
+    exit 1
+fi
+
+show_step "Building ProtocolPilot application (npm run build)"
+if npm run build; then
+    echo "✅ Application built successfully."
+else
+    echo "⚠️ Failed to build application."
+    exit 1
+fi
+
+show_step "Setting up ProtocolPilot with PM2"
+# Ensure PM2 can find Node.js, path might be an issue with sudo
+# The `fix_npm_path` should help, but direct path to pm2 can be more robust if needed
+PM2_CMD=$(command -v pm2 || echo "/usr/local/bin/pm2") # Fallback if not in sudo path but linked
+
+if $PM2_CMD list | grep -q "$APP_DIR_NAME"; then
+    echo "Application '$APP_DIR_NAME' is already managed by PM2. Restarting..."
+    $PM2_CMD restart "$APP_DIR_NAME" --update-env
+else
+    echo "Starting application '$APP_DIR_NAME' with PM2..."
+    # The `npm start` script in package.json is `next start` (which uses port 3000 by default)
+    $PM2_CMD start npm --name "$APP_DIR_NAME" -- run start
+fi
+$PM2_CMD save # Save current process list
+# Setup PM2 to start on boot
+# The output of this command needs to be run by the user if it doesn't run automatically
+# It usually prints a command like: sudo env PATH=$PATH:/usr/bin /usr/local/bin/pm2 startup systemd -u youruser --hp /home/youruser
+echo "Configuring PM2 to start on system boot..."
+PM2_STARTUP_CMD_OUTPUT=$($PM2_CMD startup systemd -u "$(whoami)" --hp "$HOME" | grep 'sudo env PATH')
 if [ -n "$PM2_STARTUP_CMD_OUTPUT" ]; then
-    print_info "Attempting to execute PM2 startup command automatically:"
+    echo "Attempting to execute PM2 startup command automatically:"
     echo "$PM2_STARTUP_CMD_OUTPUT"
     PM2_EXEC_CMD=$(echo "$PM2_STARTUP_CMD_OUTPUT" | sed -n 's/.*\(sudo env PATH.*\)/\1/p')
     if [ -n "$PM2_EXEC_CMD" ]; then
         eval "$PM2_EXEC_CMD"
-        print_success "PM2 startup command executed."
+        echo "✅ PM2 startup command executed."
     else
-        print_warning "Could not parse PM2 startup command. You might need to run it manually."
-        print_info "Run '$PM2_PATH startup' and follow instructions if the service does not start on boot."
+        echo "⚠️ Could not parse PM2 startup command. You might need to run it manually from the output above."
     fi
 else
-    print_warning "Could not automatically determine PM2 startup command. You may need to run it manually."
-    print_info "Run '$PM2_PATH startup' and follow the instructions if the service does not start on boot."
+    echo "⚠️ Could not automatically determine PM2 startup command. You may need to run '$PM2_CMD startup' manually."
 fi
-"$PM2_PATH" save
-print_success "PM2 startup configuration saved."
 
 
-# --- Final Instructions ---
-print_step "🎉 ProtocolPilot Installation Complete! 🎉"
+# --- Final Output ---
+echo ""
+echo "✅ ProtocolPilot Installation Completed Successfully!"
+echo "---------------------------------------------------"
+echo ""
+echo "📋 Admin Credentials & Access Information:"
+echo "   ---------------------------------------"
+echo "   🌐 Panel URL: http://$SERVER_IP:3000/paneladmin"
+echo "   👤 Username:   $DEFAULT_USER"
+echo "   🔑 Password:   $DEFAULT_PASS"
+echo ""
+echo "   (The above password was randomly generated. Store it securely!)"
+echo ""
+echo "⚠️ Important Next Steps:"
+echo "   -------------------"
+echo "   1. Access the panel URL in your browser."
+echo "   2. Log in with the username and password provided above."
+echo "   3. IMMEDIATELY go to 'Panel Settings' and change the default admin username and password for security."
+echo "   4. Review Nginx setup for reverse proxy and SSL (see INSTALL_UBUNTU.md or Nginx docs)."
+echo ""
+echo "   To check application status: $PM2_CMD list"
+echo "   To view logs: $PM2_CMD logs $APP_DIR_NAME"
+echo ""
+echo "ℹ️ Note on System Metrics & Real Data:"
+echo "   - The panel UI for system metrics (IP, CPU, RAM, Bandwidth) and user counts is mostly for display."
+echo "   - True real-time data for CPU, RAM, and Bandwidth requires a backend agent or service on the server"
+echo "     that the Next.js application can query. This script does not install such an agent."
+echo "   - The IP address displayed on the login page info and in Panel Settings is derived from 'hostname -I'."
+echo "   - User management now starts with an empty list. Users are added via the panel."
+echo ""
+echo "The application is set to run on port 3000. If you need to change this:"
+echo "  - Modify the 'PORT=3000' line in $INSTALL_PATH/.env"
+echo "  - Adjust your 'npm start' script in package.json if it specifies a port (-p flag)"
+echo "  - Restart the application using: $PM2_CMD restart $APP_DIR_NAME"
+echo "  - Update any reverse proxy (e.g., Nginx) configuration."
 
-SERVER_IP=$(hostname -I | awk '{print $1}')
-PANEL_PORT=$(grep -oP '"start":\s*"next start(-p\s+\K[0-9]+)?' package.json | grep -oP '[0-9]+$' || echo "3000")
-
-LOGIN_PATH="/paneladmin" 
-DEFAULT_USERNAME="admin_please_change" 
-DEFAULT_PASSWORD="password"
-
-print_info "Your ProtocolPilot panel should be accessible at:"
-echo "   👉 http://$SERVER_IP:$PANEL_PORT"
-echo ""
-print_info "To access the admin login page, navigate to:"
-echo "   🌐 http://$SERVER_IP:$PANEL_PORT$LOGIN_PATH"
-echo ""
-print_warning "Default Login Credentials (from initial setup):"
-echo "   👤 Username: $DEFAULT_USERNAME"
-echo "   🔑 Password: $DEFAULT_PASSWORD"
-echo ""
-print_warning "SECURITY WARNING: Please change the default username and password immediately after your first login via the 'Panel Settings' page!"
-echo ""
-print_info "To check the status of your application, use: $PM2_PATH list"
-print_info "To view logs, use: $PM2_PATH logs $APP_DIR_NAME"
-echo ""
-print_step "Next Steps (Recommended): Configure Nginx Reverse Proxy"
-echo "For production, it's highly recommended to set up Nginx as a reverse proxy to:"
-echo "  - Serve your application on standard ports (80/443)."
-echo "  - Enable SSL/TLS for HTTPS."
-echo "  - Improve performance and security."
-echo ""
-echo "Example Nginx server block (save to /etc/nginx/sites-available/protocolpilot and then enable):"
-cat << EOF
-server {
-    listen 80;
-    server_name your_domain.com_or_server_ip; 
-
-    location / {
-        proxy_pass http://localhost:$PANEL_PORT; 
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-EOF
-echo ""
-echo "After creating the Nginx config (e.g., /etc/nginx/sites-available/protocolpilot):"
-echo "  1. sudo ln -s /etc/nginx/sites-available/protocolpilot /etc/nginx/sites-enabled/"
-echo "  2. sudo nginx -t"
-echo "  3. sudo systemctl restart nginx"
-echo "  4. Consider setting up SSL using Certbot: sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx"
-echo ""
-print_success "Installation script finished. Enjoy ProtocolPilot!"
 exit 0
+
+    

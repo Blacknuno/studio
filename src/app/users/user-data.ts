@@ -248,117 +248,7 @@ export type User = {
   };
 };
 
-export const mockUsers: User[] = [
-  {
-    id: 'usr_1',
-    username: 'johndoe',
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    status: 'Active',
-    kernelId: 'wireguard',
-    kernelProfile: 'WireGuard Standard',
-    protocol: 'udp',
-    dataAllowanceGB: 100,
-    dataUsedGB: 45,
-    maxConcurrentIPs: 3,
-    validityPeriodDays: 30,
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    isEnabled: true,
-    notes: 'VIP user, prioritize support.',
-    sublinkPath: 'sub_johndoe_alpha123',
-    enableTunnelSetup: true,
-    tunnelConfig: {
-      service: 'tor',
-      countries: ['US', 'DE'],
-    }
-  },
-  {
-    id: 'usr_2',
-    username: 'janesmith',
-    fullName: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    status: 'Inactive',
-    kernelId: 'openvpn',
-    kernelProfile: 'OpenVPN Secure',
-    protocol: 'tcp',
-    dataAllowanceGB: 50,
-    dataUsedGB: 10,
-    maxConcurrentIPs: 1,
-    validityPeriodDays: 90,
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    isEnabled: false,
-    notes: '',
-    sublinkPath: 'sub_janesmith_beta456',
-    enableTunnelSetup: false,
-    tunnelConfig: {
-      service: 'none',
-    }
-  },
-  {
-    id: 'usr_3',
-    username: 'alicew',
-    fullName: 'Alice Wonderland',
-    email: 'alice.w@example.com',
-    status: 'Active',
-    kernelId: 'xray',
-    kernelProfile: 'Xray-core VLESS',
-    protocol: 'vless',
-    dataAllowanceGB: 200,
-    dataUsedGB: 196, 
-    maxConcurrentIPs: 5,
-    validityPeriodDays: 365,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    isEnabled: true,
-    sublinkPath: 'sub_alicew_gamma789',
-    enableTunnelSetup: true,
-    tunnelConfig: {
-      service: 'warp',
-      warpLicenseKey: 'WARP-MOCK-VALID-KEY-ALICE',
-    }
-  },
-  {
-    id: 'usr_4',
-    username: 'bobthebuilder',
-    fullName: 'Bob Builder',
-    email: 'bob.b@example.com',
-    status: 'Expired',
-    kernelId: 'sing-box',
-    kernelProfile: 'Sing-box Hysteria',
-    protocol: 'hysteria2',
-    dataAllowanceGB: 20,
-    dataUsedGB: 19.5,
-    maxConcurrentIPs: 2,
-    validityPeriodDays: 15,
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    isEnabled: false,
-    notes: 'Subscription ended, needs renewal.',
-    sublinkPath: 'sub_bob_delta001',
-    enableTunnelSetup: false,
-  },
-   {
-    id: 'usr_5',
-    username: 'testtor',
-    fullName: 'Test Tor User',
-    email: 'tor.user@example.com',
-    status: 'Active',
-    kernelId: 'tor-service', 
-    kernelProfile: 'Tor Standard Profile',
-    protocol: 'tor',
-    dataAllowanceGB: 50,
-    dataUsedGB: 5,
-    maxConcurrentIPs: 1,
-    validityPeriodDays: 30,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    isEnabled: true,
-    notes: 'Testing Tor service.',
-    sublinkPath: 'sub_tortester_zeta321',
-    enableTunnelSetup: true,
-    tunnelConfig: {
-        service: 'psiphon',
-        countries: ['CA']
-    }
-  },
-];
+export const mockUsers: User[] = []; // Start with an empty user list
 
 export function calculateExpiresOn(createdAt: string, validityPeriodDays: number): string {
   const createdDate = new Date(createdAt);
@@ -407,7 +297,7 @@ export type ManagedHost = {
 
 
 export type PanelSettingsData = {
-  ipAddress: string;
+  ipAddress: string; // This will be displayed as "N/A" or "Set by server"
   loginPort: number;
   loginPath: string;
   username: string; 
@@ -426,12 +316,12 @@ export type PanelSettingsData = {
   loginPageBackgroundImageUrl?: string; 
 };
 
-export const DEFAULT_USERNAME_FOR_SETUP = "admin_please_change";
+export const DEFAULT_USERNAME_FOR_SETUP = "admin"; // Updated to 'admin' as per new script
 
 export const initialPanelSettings: PanelSettingsData = {
-  ipAddress: "192.168.1.100", 
-  loginPort: 2053,
-  loginPath: "/paneladmin",
+  ipAddress: "N/A (Set by server .env)", 
+  loginPort: 3000, // Changed to 3000 to match install script
+  loginPath: "/paneladmin", // Changed to /paneladmin
   username: DEFAULT_USERNAME_FOR_SETUP, 
   telegramBotToken: "",
   telegramAdminChatId: "",
@@ -553,5 +443,24 @@ export const mockManagedHosts: ManagedHost[] = [
     isEnabled: false,
   },
 ];
+
+// This was previously XrayInboundSetting but seems to be used for Xray settings globally.
+// If Xray inbounds are configured elsewhere (e.g. Managed Hosts or raw Xray config), this might be redundant.
+// For now, keeping it as it was used by `XrayInboundsCard`.
+export type XrayInboundSetting = { 
+  id: string;
+  tag: string;
+  port: number;
+  protocol: 'vless' | 'vmess' | 'trojan' | 'shadowsocks' | 'http' | 'socks';
+  settings: string; 
+  streamSettings: string; 
+  isEnabled: boolean;
+};
+// This needs to be initialized if XrayInboundsCard is still used.
+// For consistency with "Managed Hosts" taking over detailed Xray config, this might be better removed or re-evaluated.
+// If `initialPanelSettings` had an `xrayInbounds` property, it should be initialized here.
+// initialPanelSettings.xrayInbounds = []; // Example if it were part of PanelSettingsData
+    
+
 
     

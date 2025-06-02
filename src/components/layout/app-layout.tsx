@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wand2, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2, Route, Spline as TunnelIcon } from "lucide-react"; 
+import { LayoutDashboard, Shield, UsersRound, Cpu, Settings, Server, Globe2, Share2 } from "lucide-react"; 
 import {
   SidebarProvider,
   Sidebar,
@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-// useLanguage hook and LanguageSwitcher removed
 
 type AppLayoutProps = {
   children: React.ReactNode;
@@ -26,11 +25,10 @@ type AppLayoutProps = {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  // const { t } = useLanguage(); // Removed
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/ai-configurator", label: "AI Configurator", icon: Wand2 },
+    // AI Configurator removed
     { href: "/users", label: "User Management", icon: UsersRound },
     { href: "/node-plus", label: "Node+", icon: Server },
     { href: "/hosts", label: "Hosts", icon: Globe2 },
@@ -51,7 +49,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Shield className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-headline font-semibold">ProtocolPilot</h1>
           </Link>
-          {/* Language switcher removed */}
         </SidebarHeader>
         <Separator />
         <SidebarContent>
@@ -109,10 +106,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               <h1 className="text-xl font-headline font-semibold">ProtocolPilot</h1>
             </Link>
           </div>
-          {/* Language switcher removed */}
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
+    

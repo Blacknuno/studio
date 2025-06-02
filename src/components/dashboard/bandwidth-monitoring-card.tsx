@@ -2,44 +2,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { bandwidthHistoricalData } from "./mock-data";
-import { Upload, Download } from "lucide-react";
+import { Upload, Download, BarChartBig } from "lucide-react";
 import { useState, useEffect } from "react";
 
-const chartConfig = {
-  upload: {
-    label: "Upload",
-    color: "hsl(var(--chart-2))", // Using accent chart color
-    icon: Upload,
-  },
-  download: {
-    label: "Download",
-    color: "hsl(var(--chart-1))", // Using primary chart color
-    icon: Download,
-  },
-} satisfies import("@/components/ui/chart").ChartConfig;
-
 export function BandwidthMonitoringCard() {
-  const [liveUpload, setLiveUpload] = useState<string>("0 Mbps");
-  const [liveDownload, setLiveDownload] = useState<string>("0 Mbps");
+  const [liveUpload, setLiveUpload] = useState<string>("N/A");
+  const [liveDownload, setLiveDownload] = useState<string>("N/A");
 
-  useEffect(() => {
-    // Simulate live data updates
-    const interval = setInterval(() => {
-      setLiveUpload((Math.random() * 100).toFixed(2) + " Mbps");
-      setLiveDownload((Math.random() * 500).toFixed(2) + " Mbps");
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
+  // Removed useEffect that simulates live data as we are now indicating server integration is needed.
 
   return (
     <Card className="lg:col-span-2">
@@ -65,57 +35,16 @@ export function BandwidthMonitoringCard() {
           </div>
         </div>
 
-        <h4 className="font-headline text-lg mb-2">Historical Data (Last 7 Days)</h4>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <AreaChart
-            data={bandwidthHistoricalData}
-            margin={{
-              top: 5,
-              right: 20,
-              left: -20, // Adjust to make Y-axis labels visible
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis 
-              dataKey="date" 
-              tickLine={false} 
-              axisLine={false} 
-              tickMargin={8} 
-              tickFormatter={(value) => value.slice(0,3)}
-              className="font-body text-xs"
-            />
-            <YAxis 
-              tickLine={false} 
-              axisLine={false} 
-              tickMargin={8} 
-              unit=" GB"
-              className="font-body text-xs"
-            />
-            <ChartTooltip
-              cursor={true}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <Area
-              dataKey="upload"
-              type="monotone"
-              fill="var(--color-upload)"
-              fillOpacity={0.4}
-              stroke="var(--color-upload)"
-              stackId="a"
-            />
-            <Area
-              dataKey="download"
-              type="monotone"
-              fill="var(--color-download)"
-              fillOpacity={0.4}
-              stroke="var(--color-download)"
-              stackId="a"
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-          </AreaChart>
-        </ChartContainer>
+        <div className="text-center py-8 px-4 border-2 border-dashed border-muted rounded-lg">
+          <BarChartBig className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <h4 className="font-headline text-lg mb-1">Historical Data</h4>
+          <p className="text-sm text-muted-foreground font-body">
+            Real-time and historical bandwidth data requires server-side integration to collect and provide metrics.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
 }
+
+    
