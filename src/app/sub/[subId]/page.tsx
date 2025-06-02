@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { QrCodeDialog } from '@/components/ui/qr-code-dialog'; // New import
 
 export default function UserSubscriptionPage() {
   const params = useParams();
@@ -19,6 +20,8 @@ export default function UserSubscriptionPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userKernel, setUserKernel] = useState<Kernel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
+  const [qrCodeValue, setQrCodeValue] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,36 +72,32 @@ export default function UserSubscriptionPage() {
   const protocolInfo = userKernel?.protocols.find(p => p.name === user.protocol);
   const expiresOn = calculateExpiresOn(user.createdAt, user.validityPeriodDays);
   const isExpired = new Date() > new Date(new Date(user.createdAt).setDate(new Date(user.createdAt).getDate() + user.validityPeriodDays));
+  const canDownloadConfig = userKernel && (userKernel.id === 'openvpn' || userKernel.id === 'wireguard');
 
   const getPortsForUser = (): string => {
     if (!userKernel || !userKernel.config) return "N/A";
-
-    if (userKernel.id === 'xray') {
-      const relevantInbounds = initialPanelSettings.xrayInbounds.filter(
-        inbound => inbound.isEnabled && inbound.protocol === user.protocol
-      );
-      if (relevantInbounds.length > 0) {
-        return relevantInbounds.map(rb => rb.port).join(', ');
-      }
-      return "Panel Defined"; // Fallback if no direct match
-    }
-    
-    const config = userKernel.config as any; // Type assertion
+    // This part is complex because Xray inbounds are now 'Managed Hosts' or raw Xray config.
+    // For this page, we'll simplify and assume ports might be on the kernel config directly for non-Xray.
+    // A more robust solution would require querying the actual host/inbound settings linked to this user.
+    const config = userKernel.config as any; 
     if (config.ports && Array.isArray(config.ports)) {
       return (config.ports as number[]).join(', ');
     }
-    if (config.port) { // For OpenVPN
+    if (config.port) { 
       return config.port.toString();
     }
-     if (config.listenPort) { // For WireGuard
+     if (config.listenPort) { 
       return config.listenPort.toString();
     }
+    // For Xray, port determination is complex and depends on Managed Hosts or raw Xray config.
+    // This page probably shouldn't try to replicate that logic.
+    if (userKernel.id === 'xray') return "Panel Defined"; 
     return "N/A";
   };
 
   const getSelectedCountries = (): Country[] => {
     if (!userKernel || !userKernel.config) return [];
-    const config = userKernel.config as (TorWarpFakeSiteConfig | PsiphonProConfig);
+    const config = userKernel.config as (TorWarpFakeSiteConfig | PsiphonProConfig); // Assuming these are the only ones with country selection
     if (config.enableCountrySelection && config.selectedCountries) {
       return availableCountries.filter(ac => config.selectedCountries.includes(ac.code));
     }
@@ -107,6 +106,39 @@ export default function UserSubscriptionPage() {
   const userPorts = getPortsForUser();
   const userSelectedCountries = getSelectedCountries();
 
+  const handleShowQrCode = () => {
+    if (user.sublinkPath && typeof window !== 'undefined') {
+      setQrCodeValue(`${window.location.origin}/sub/${user.sublinkPath}`);
+      setIsQrCodeDialogOpen(true);
+    } else {
+      toast({ title: "Error", description: "Subscription link not available for QR code.", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadConfig = () => {
+    if (!userKernel || !canDownloadConfig) {
+      toast({ title: "Not Applicable", description: `Config download is not available for ${userKernel?.name || 'this service'}.`, variant: "default"});
+      return;
+    }
+
+    let content = `[Interface]\n# Mock config for ${user.username}\n# Kernel: ${userKernel.name}\n# Protocol: ${user.protocol}\n\n`;
+    if (userKernel.id === 'wireguard') {
+        content += `PrivateKey = USER_PRIVATE_KEY_HERE\nAddress = 10.0.0.X/32 # Replace with user's WG IP\nDNS = 1.1.1.1, 8.8.8.8\n\n[Peer]\nPublicKey = SERVER_PUBLIC_KEY_HERE\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = YOUR_SERVER_IP_OR_DOMAIN:${(userKernel.config as WireGuardConfig)?.listenPort || 51820}\nPersistentKeepalive = 25\n`;
+    } else if (userKernel.id === 'openvpn') {
+        content += `client\ndev tun\nproto ${(userKernel.config as OpenVPNConfig)?.proto || 'udp'}\nremote YOUR_SERVER_IP_OR_DOMAIN ${(userKernel.config as OpenVPNConfig)?.port || 1194}\nresolv-retry infinite\nnobind\npersist-key\npersist-tun\ncomp-lzo\nverb 3\n# Add user certs/keys or auth details below\n# <ca>...</ca>\n# <cert>...</cert>\n# <key>...</key>\n# auth-user-pass\n`;
+    }
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${user.username}_${userKernel.id}_config.conf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Configuration Downloaded", description: `Mock configuration for ${user.username} downloaded.` });
+  };
 
   return (
      <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -169,16 +201,19 @@ export default function UserSubscriptionPage() {
           <div className="space-y-3 pt-2">
               <h3 className="font-semibold font-headline text-lg text-center">Get Connected</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button 
-                      className="w-full font-body" 
-                      onClick={() => toast({ title: "Download Configuration", description: "Mock: Configuration file download would start here."})}
-                  >
-                      <DownloadCloud className="mr-2 h-5 w-5" /> Download Config
-                  </Button>
+                  {canDownloadConfig ? (
+                    <Button className="w-full font-body" onClick={handleDownloadConfig}>
+                        <DownloadCloud className="mr-2 h-5 w-5" /> Download Config
+                    </Button>
+                  ) : (
+                    <Button className="w-full font-body" variant="outline" disabled>
+                        <DownloadCloud className="mr-2 h-5 w-5" /> Download Config
+                    </Button>
+                  )}
                   <Button 
                       variant="outline" 
                       className="w-full font-body"
-                      onClick={() => toast({ title: "Show QR Code", description: "Mock: QR code for configuration would be displayed here."})}
+                      onClick={handleShowQrCode}
                   >
                       <QrCode className="mr-2 h-5 w-5" /> Show QR Code
                   </Button>
@@ -198,6 +233,15 @@ export default function UserSubscriptionPage() {
           </p>
         </CardFooter>
       </Card>
+      {isQrCodeDialogOpen && (
+        <QrCodeDialog
+          isOpen={isQrCodeDialogOpen}
+          onClose={() => setIsQrCodeDialogOpen(false)}
+          value={qrCodeValue}
+          title="Your Subscription Link"
+          description="Scan this QR code or copy the link to share/import your subscription."
+        />
+      )}
     </div>
   );
 }

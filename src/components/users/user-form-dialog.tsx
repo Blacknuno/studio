@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -90,6 +89,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
   const [availableProtocols, setAvailableProtocols] = React.useState<KernelProtocol[]>([]);
   const [subscriptionUrl, setSubscriptionUrl] = React.useState<string>("");
   const { toast } = useToast();
+  const isNewUser = !userData;
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -104,7 +104,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
       : {
           username: "",
           fullName: "",
-          email: "",
+          email: "", // Will be auto-generated
           status: "Active",
           kernelId: kernels[0]?.id || "",
           kernelProfile: kernels[0]?.name || "",
@@ -125,6 +125,7 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
   const currentSublinkPath = form.watch("sublinkPath");
   const enableTunnel = form.watch("enableTunnelSetup");
   const selectedTunnelService = form.watch("tunnelConfig.service");
+  const usernameValue = form.watch("username");
 
   React.useEffect(() => {
     if (currentSublinkPath && typeof window !== 'undefined') {
@@ -134,6 +135,11 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
     }
   }, [currentSublinkPath]);
 
+  React.useEffect(() => {
+    if (isNewUser && usernameValue) {
+      form.setValue("email", `${usernameValue.toLowerCase().replace(/[^a-z0-9_.-]/gi, '') || 'user'}@protocolpilot.local`, { shouldValidate: false });
+    }
+  }, [usernameValue, isNewUser, form]);
 
   React.useEffect(() => {
     if (selectedKernelId) {
@@ -168,13 +174,13 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
         });
         const initialKernel = kernels.find(k => k.id === userData.kernelId);
         setAvailableProtocols(initialKernel?.protocols || []);
-      } else {
+      } else { // New user
         const defaultKernel = kernels[0];
         const newSublinkPath = `sub_${Math.random().toString(36).substring(2, 10)}`;
         form.reset({
           username: "",
           fullName: "",
-          email: "",
+          email: "", // Will be set by username watcher
           status: "Active",
           kernelId: defaultKernel?.id || "",
           kernelProfile: defaultKernel?.name || "",
@@ -190,6 +196,10 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
           tunnelConfig: { service: 'none', countries: [], warpLicenseKey: "" },
         });
         setAvailableProtocols(defaultKernel?.protocols || []);
+        // Initial email set if username is empty
+        if (!form.getValues("username")) {
+          form.setValue("email", `user@protocolpilot.local`);
+        }
       }
     }
   }, [userData, form, isOpen]);
@@ -238,7 +248,6 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
     }
   };
 
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px]">
@@ -263,7 +272,26 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
                         <FormField control={form.control} name="username" render={({ field }) => (<FormItem><FormLabel className="font-body">Username</FormLabel><FormControl><Input {...field} className="font-body" /></FormControl><FormMessage /></FormItem>)} />
                         <FormField control={form.control} name="fullName" render={({ field }) => (<FormItem><FormLabel className="font-body">Full Name</FormLabel><FormControl><Input {...field} className="font-body" /></FormControl><FormMessage /></FormItem>)} />
                       </div>
-                      <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel className="font-body">Email</FormLabel><FormControl><Input type="email" {...field} className="font-body" /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-body">Email</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="email"
+                                {...field}
+                                className="font-body"
+                                readOnly={isNewUser}
+                                placeholder={isNewUser ? "Auto-generated from username" : "user@example.com"}
+                              />
+                            </FormControl>
+                            {isNewUser && <FormDescription className="font-body text-xs">Email is auto-generated from username and non-editable for new users.</FormDescription>}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </AccordionContent>
                   </AccordionItem>
 
@@ -357,7 +385,6 @@ export function UserFormDialog({ isOpen, onClose, onSave, userData }: UserFormDi
                                     <RadioGroup
                                     onValueChange={(value) => {
                                         field.onChange(value as UserFormData['tunnelConfig']['service']);
-                                        // Reset conditional fields
                                         if (value !== 'warp') form.setValue('tunnelConfig.warpLicenseKey', '');
                                         if (value !== 'tor' && value !== 'psiphon') form.setValue('tunnelConfig.countries', []);
                                     }}

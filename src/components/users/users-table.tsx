@@ -12,9 +12,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Edit3, PlusCircle, DownloadCloud, QrCode, ExternalLink, Route, Trash2 } from "lucide-react";
-import type { User } from "@/app/users/user-data";
-import { calculateExpiresOn, kernels as kernelDefinitions, mockUsers as initialMockUsers } from "@/app/users/user-data"; // Use initialMockUsers
+import { Edit3, PlusCircle, DownloadCloud, QrCode, ExternalLink, Route, Trash2, UsersRound } from "lucide-react";
+import type { User, Kernel } from "@/app/users/user-data";
+import { calculateExpiresOn, kernels as kernelDefinitions, mockUsers as initialMockUsers } from "@/app/users/user-data";
 import { UserFormDialog } from "./user-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -32,18 +32,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { QrCodeDialog } from "@/components/ui/qr-code-dialog"; // New import
 
 interface UsersTableProps {
-  initialUsers: User[]; // This prop might become less relevant if we always start empty from user-data.ts
+  initialUsers: User[];
 }
 
 export function UsersTable({ initialUsers }: UsersTableProps) {
-  // Initialize with initialUsers from user-data.ts, which should now be empty
   const [users, setUsers] = React.useState<User[]>(initialMockUsers);
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [lastInteractedUserId, setLastInteractedUserId] = React.useState<string | null>(null);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
+  const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = React.useState(false);
+  const [qrCodeValue, setQrCodeValue] = React.useState("");
   const { toast } = useToast();
 
   const handleAddUser = () => {
@@ -68,7 +70,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
       description: `User "${userToDelete.username}" has been deleted (mocked).`,
       variant: "destructive"
     });
-    setUserToDelete(null); // Close the dialog
+    setUserToDelete(null);
   };
 
   const handleToggleUserEnabled = (userId: string, currentIsEnabled: boolean) => {
@@ -85,10 +87,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
 
   const handleFormSave = (userToSave: User) => {
     let newUserId = userToSave.id;
-    if (selectedUser) { // Editing existing user
+    if (selectedUser) {
       setUsers(users.map((u) => (u.id === userToSave.id ? userToSave : u)));
       newUserId = selectedUser.id;
-    } else { // Adding new user
+    } else {
       newUserId = `usr_${Date.now()}`;
       const newUserWithId = { 
         ...userToSave, 
@@ -110,16 +112,11 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const getStatusVariant = (status: User['status'], isEnabled: boolean) => {
     if (!isEnabled) return 'secondary'; 
     switch (status) {
-      case 'Active':
-        return 'default';
-      case 'Inactive':
-        return 'secondary';
-      case 'Expired':
-        return 'outline';
-      case 'Banned':
-        return 'destructive';
-      default:
-        return 'default';
+      case 'Active': return 'default';
+      case 'Inactive': return 'secondary';
+      case 'Expired': return 'outline';
+      case 'Banned': return 'destructive';
+      default: return 'default';
     }
   };
 
@@ -143,6 +140,40 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     return "No Tunnel";
   };
 
+  const handleShowQrCode = (user: User) => {
+    if (user.sublinkPath && typeof window !== 'undefined') {
+      setQrCodeValue(`${window.location.origin}/sub/${user.sublinkPath}`);
+      setIsQrCodeDialogOpen(true);
+    } else {
+      toast({ title: "Error", description: "Subscription link not available for QR code.", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadConfig = (user: User) => {
+    const kernel = kernelDefinitions.find(k => k.id === user.kernelId);
+    if (!kernel || (kernel.id !== 'openvpn' && kernel.id !== 'wireguard')) {
+      toast({ title: "Not Applicable", description: `Config download is not available for ${kernel?.name || 'this kernel'}.`, variant: "default"});
+      return;
+    }
+
+    let content = `[Interface]\n# Mock config for ${user.username}\n# Kernel: ${kernel.name}\n# Protocol: ${user.protocol}\n\n`;
+    if (kernel.id === 'wireguard') {
+        content += `PrivateKey = USER_PRIVATE_KEY_HERE\nAddress = 10.0.0.X/32 # Replace with user's WG IP\nDNS = 1.1.1.1, 8.8.8.8\n\n[Peer]\nPublicKey = SERVER_PUBLIC_KEY_HERE\nAllowedIPs = 0.0.0.0/0, ::/0\nEndpoint = YOUR_SERVER_IP_OR_DOMAIN:${(kernel.config as any)?.listenPort || 51820}\nPersistentKeepalive = 25\n`;
+    } else if (kernel.id === 'openvpn') {
+        content += `client\ndev tun\nproto ${(kernel.config as any)?.proto || 'udp'}\nremote YOUR_SERVER_IP_OR_DOMAIN ${(kernel.config as any)?.port || 1194}\nresolv-retry infinite\nnobind\npersist-key\npersist-tun\ncomp-lzo\nverb 3\n# Add user certs/keys or auth details below\n# <ca>...</ca>\n# <cert>...</cert>\n# <key>...</key>\n# auth-user-pass\n`;
+    }
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${user.username}_${user.kernelId}_config.conf`; // Ensure .conf for WireGuard at least
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Configuration Downloaded", description: `Mock configuration for ${user.username} downloaded.` });
+  };
 
   return (
     <div className="space-y-4">
@@ -166,7 +197,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {users.map((user) => {
+                const userKernel = kernelDefinitions.find(k => k.id === user.kernelId);
+                const canDownloadConfig = userKernel && (userKernel.id === 'openvpn' || userKernel.id === 'wireguard');
+                return (
                 <TableRow 
                   key={user.id}
                   className={cn(
@@ -207,17 +241,19 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                     <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Edit User">
                       <Edit3 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => toast({ title: "Download Config", description: `Preparing config for ${user.username}... (mock)`})} title="Download Config">
-                      <DownloadCloud className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => toast({ title: "Show QR Code", description: `Generating QR code for ${user.username}... (mock)`})} title="Show QR Code">
+                    {canDownloadConfig && (
+                      <Button variant="ghost" size="icon" onClick={() => handleDownloadConfig(user)} title="Download Config">
+                        <DownloadCloud className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => handleShowQrCode(user)} title="Show QR Code">
                       <QrCode className="h-4 w-4" />
                     </Button>
                     {user.sublinkPath && (
-                      <Link href={`/sub/${user.sublinkPath}`} target="_blank" passHref>
-                        <Button variant="ghost" size="icon" title="Subscription Page">
+                      <Link href={`/sub/${user.sublinkPath}`} target="_blank" passHref legacyBehavior>
+                        <a className={cn(buttonVariants({ variant: "ghost", size: "icon" }))} title="Subscription Page">
                           <ExternalLink className="h-4 w-4" />
-                        </Button>
+                        </a>
                       </Link>
                     )}
                     <AlertDialog>
@@ -226,7 +262,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </AlertDialogTrigger>
-                      {userToDelete && userToDelete.id === user.id && ( // Ensure dialog is for the correct user
+                      {userToDelete && userToDelete.id === user.id && (
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -245,7 +281,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                     </AlertDialog>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </div>
@@ -268,8 +304,15 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           userData={selectedUser}
         />
       )}
+      {isQrCodeDialogOpen && (
+        <QrCodeDialog
+          isOpen={isQrCodeDialogOpen}
+          onClose={() => setIsQrCodeDialogOpen(false)}
+          value={qrCodeValue}
+          title="User Subscription Link"
+          description="Scan this QR code or copy the link to access the user's subscription page."
+        />
+      )}
     </div>
   );
 }
-
-    
