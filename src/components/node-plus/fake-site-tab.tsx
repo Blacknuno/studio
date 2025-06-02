@@ -12,61 +12,101 @@ import { Label } from "@/components/ui/label";
   import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { initialPanelSettings } from "@/app/users/user-data";
-import { Globe, CheckCircle, AlertTriangle, Save, ShieldAlert } from "lucide-react";
+import { initialPanelSettings, defaultInitialPanelSettings } from "@/app/users/user-data";
+import { Globe, CheckCircle, AlertTriangle, Save, ShieldAlert, RotateCcw } from "lucide-react";
 
 const fakeSiteSchema = z.object({
   isEnabled: z.boolean(),
   decoyDomain: z.string().min(3, "Decoy domain must be at least 3 characters long."),
   nginxConfigSnippet: z.string().min(20, "Nginx config snippet seems too short."),
+  // isValidated is not part of the form, but managed internally
 });
 
 type FakeSiteFormData = z.infer<typeof fakeSiteSchema>;
 
 export function FakeSiteTab() {
   const { toast } = useToast();
-  const [settings, setSettings] = React.useState(initialPanelSettings.fakeSite);
+  // Local state for the form, initialized from global mock settings
+  const [currentSettings, setCurrentSettings] = React.useState(initialPanelSettings.fakeSite);
+  // Local state for validation status, separate from form data
+  const [isValidated, setIsValidated] = React.useState(initialPanelSettings.fakeSite.isValidated);
+
 
   const form = useForm<FakeSiteFormData>({
     resolver: zodResolver(fakeSiteSchema),
     defaultValues: {
-      isEnabled: settings.isEnabled,
-      decoyDomain: settings.decoyDomain,
-      nginxConfigSnippet: settings.nginxConfigSnippet,
+      isEnabled: currentSettings.isEnabled,
+      decoyDomain: currentSettings.decoyDomain,
+      nginxConfigSnippet: currentSettings.nginxConfigSnippet,
     },
   });
 
   React.useEffect(() => {
-    form.reset(settings);
-  }, [settings, form]);
+    // When initialPanelSettings (global mock) changes, update local state and form
+    setCurrentSettings(initialPanelSettings.fakeSite);
+    setIsValidated(initialPanelSettings.fakeSite.isValidated);
+    form.reset({
+        isEnabled: initialPanelSettings.fakeSite.isEnabled,
+        decoyDomain: initialPanelSettings.fakeSite.decoyDomain,
+        nginxConfigSnippet: initialPanelSettings.fakeSite.nginxConfigSnippet,
+    });
+  }, [initialPanelSettings.fakeSite, form]);
+
 
   const handleSaveChanges = (data: FakeSiteFormData) => {
-    const newSettings = { ...settings, ...data };
-    setSettings(newSettings);
-    initialPanelSettings.fakeSite = newSettings; // Mock save
+    // Update the global mock settings object
+    initialPanelSettings.fakeSite = {
+        ...initialPanelSettings.fakeSite, // preserve isValidated
+        ...data,
+        isValidated: isValidated // ensure current validation state is saved
+    };
+    // Update local state to reflect saved data
+    setCurrentSettings(initialPanelSettings.fakeSite);
+
     toast({
       title: "Fake Site Settings Saved",
       description: "Your Fake Site configurations have been (mock) saved.",
     });
   };
 
+  const handleResetToDefaults = () => {
+    // Reset local form state to pristine defaults
+    form.reset({
+        isEnabled: defaultInitialPanelSettings.fakeSite.isEnabled,
+        decoyDomain: defaultInitialPanelSettings.fakeSite.decoyDomain,
+        nginxConfigSnippet: defaultInitialPanelSettings.fakeSite.nginxConfigSnippet,
+    });
+    // Reset internal validation state
+    setIsValidated(defaultInitialPanelSettings.fakeSite.isValidated);
+    
+    // Update the global mock settings object
+    initialPanelSettings.fakeSite = JSON.parse(JSON.stringify(defaultInitialPanelSettings.fakeSite));
+    setCurrentSettings(initialPanelSettings.fakeSite); // sync local state
+
+    toast({
+      title: "Fake Site Settings Reset",
+      description: "Fake Site configurations have been reset to defaults (mocked).",
+      variant: "default"
+    });
+  };
+
   const handleValidateAndActivate = () => {
-    // Mock validation
-    const isValid = Math.random() > 0.3; // Simulate validation success/failure
-    if (isValid) {
-      const updatedSettings = { ...settings, isValidated: true, isEnabled: true };
-      setSettings(updatedSettings);
-      initialPanelSettings.fakeSite = updatedSettings; // Mock save
-      form.setValue("isEnabled", true);
+    const mockIsValid = Math.random() > 0.3; 
+    setIsValidated(mockIsValid);
+    form.setValue("isEnabled", mockIsValid); // Enable only if validation passes
+
+    // Update global mock settings
+    initialPanelSettings.fakeSite.isValidated = mockIsValid;
+    initialPanelSettings.fakeSite.isEnabled = mockIsValid;
+    setCurrentSettings(initialPanelSettings.fakeSite); // Sync local state
+
+    if (mockIsValid) {
       toast({
         title: "Fake Site Validated & Activated",
         description: "Fake Site (mock) validated and is now active.",
         className: "bg-green-500 text-white",
       });
     } else {
-      const updatedSettings = { ...settings, isValidated: false };
-      setSettings(updatedSettings);
-      initialPanelSettings.fakeSite = updatedSettings; // Mock save
       toast({
         title: "Fake Site Validation Failed",
         description: "Mock validation failed. Check port/patch and Nginx config.",
@@ -101,19 +141,19 @@ export function FakeSiteTab() {
                         id="enableFakeSite"
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={!settings.isValidated && field.value === false} // Can only enable if validated
+                        disabled={!isValidated && field.value === false} 
                     />
                 )}
              />
           </div>
           
-          {settings.isValidated && settings.isEnabled && (
+          {isValidated && form.watch("isEnabled") && (
              <div className="p-3 rounded-md bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400 flex items-center space-x-2 text-sm">
                 <CheckCircle className="h-5 w-5" />
                 <p>Fake Site is active and validated. Your panel is now camouflaged.</p>
             </div>
           )}
-           {!settings.isValidated && form.watch("isEnabled") && (
+           {!isValidated && form.watch("isEnabled") && (
              <div className="p-3 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-yellow-700 dark:text-yellow-500 flex items-center space-x-2 text-sm">
                 <AlertTriangle className="h-5 w-5" />
                 <p>Fake Site is enabled but not validated. Please Validate & Activate.</p>
@@ -154,11 +194,16 @@ export function FakeSiteTab() {
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <Button type="button" onClick={handleValidateAndActivate} variant="outline" className="font-body w-full sm:w-auto">
-            <CheckCircle className="mr-2 h-4 w-4" /> (Mock) Validate & Activate Fake Site
+            <CheckCircle className="mr-2 h-4 w-4" /> (Mock) Validate & Activate
           </Button>
-          <Button type="submit" className="font-body w-full sm:w-auto">
-            <Save className="mr-2 h-4 w-4" /> Save Fake Site Settings
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button type="button" onClick={handleResetToDefaults} variant="outline" className="font-body flex-grow sm:flex-grow-0">
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset
+            </Button>
+            <Button type="submit" className="font-body flex-grow sm:flex-grow-0">
+                <Save className="mr-2 h-4 w-4" /> Save Settings
+            </Button>
+          </div>
         </CardFooter>
       </form>
     </Card>

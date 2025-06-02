@@ -9,10 +9,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { initialPanelSettings, filterableCountries, type Country } from "@/app/users/user-data";
-import { Ban, AlertTriangle, MapPin } from "lucide-react";
+import { initialPanelSettings, defaultInitialPanelSettings, filterableCountries, type Country } from "@/app/users/user-data";
+import { Ban, AlertTriangle, MapPin, Save, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VectorMap } from "@react-jvectormap/core";
 import { worldMill } from "@react-jvectormap/world";
@@ -26,9 +27,12 @@ export function CountryBlockingCard() {
   const [lastToggledCountry, setLastToggledCountry] = React.useState<Country | null>(null);
   const [lastAction, setLastAction] = React.useState<"blocked" | "unblocked" | null>(null);
 
+  React.useEffect(() => {
+    setSelectedCountries(initialPanelSettings.blockedCountries || []);
+  }, [initialPanelSettings.blockedCountries]);
+
   const handleRegionClick = (event: any, countryCode: string) => {
     const country = filterableCountries.find(c => c.code === countryCode);
-    // Only allow toggling for predefined filterable countries
     if (!country && !selectedCountries.includes(countryCode)) {
         toast({
             variant: "default",
@@ -38,7 +42,7 @@ export function CountryBlockingCard() {
         return;
     }
     
-    setLastToggledCountry(country || {code: countryCode, name: countryCode, flag: '🏳️'}); // Use countryCode as name if not in filterable list but was selected
+    setLastToggledCountry(country || {code: countryCode, name: countryCode, flag: '🏳️'});
 
     setSelectedCountries((prev) => {
       const isCurrentlySelected = prev.includes(countryCode);
@@ -54,7 +58,6 @@ export function CountryBlockingCard() {
 
   const handleSaveChanges = () => {
     initialPanelSettings.blockedCountries = selectedCountries; 
-    console.log("Saving blocked countries:", selectedCountries);
     toast({
       title: "Country Blocking Settings Saved",
       description: `${selectedCountries.length} ${selectedCountries.length === 1 ? 'country is' : 'countries are'} now in the block list (mocked).`,
@@ -62,8 +65,19 @@ export function CountryBlockingCard() {
     setLastToggledCountry(null);
     setLastAction(null);
   };
+  
+  const handleResetToDefaults = () => {
+    setSelectedCountries(defaultInitialPanelSettings.blockedCountries || []);
+    initialPanelSettings.blockedCountries = defaultInitialPanelSettings.blockedCountries || [];
+    toast({
+      title: "Country Blocking Reset",
+      description: "Blocked countries list has been reset to defaults (mocked).",
+      variant: "default"
+    });
+    setLastToggledCountry(null);
+    setLastAction(null);
+  };
 
-  // Convert selected country codes to an object for jVectorMap `selectedRegions`
   const selectedRegionsForMap = React.useMemo(() => {
     return selectedCountries.reduce((acc, code) => {
       acc[code] = true;
@@ -93,7 +107,7 @@ export function CountryBlockingCard() {
             }}
             regionStyle={{
               initial: {
-                fill: "hsl(var(--muted-foreground))", // Muted color for non-selected countries
+                fill: "hsl(var(--muted-foreground))", 
                 fillOpacity: 0.7,
                 stroke: "hsl(var(--background))",
                 strokeWidth: 0.5,
@@ -105,7 +119,7 @@ export function CountryBlockingCard() {
                  fill: "hsl(var(--accent))",
               },
               selected: {
-                fill: "hsl(var(--destructive))", // Red for selected (blocked) countries
+                fill: "hsl(var(--destructive))", 
               },
               selectedHover: {
                  fill: "hsl(var(--destructive))",
@@ -118,7 +132,7 @@ export function CountryBlockingCard() {
             series={{
                 regions: [
                     {
-                        values: filterableCountries.reduce((acc, c) => ({...acc, [c.code]: 'hsl(var(--primary))'}), {}), // Highlight filterable countries
+                        values: filterableCountries.reduce((acc, c) => ({...acc, [c.code]: 'hsl(var(--primary))'}), {}), 
                         attribute: 'fill',
                     }
                 ]
@@ -141,10 +155,15 @@ export function CountryBlockingCard() {
             <strong>Note:</strong> Clicking on a country toggles its selection for blocking. Blocked countries will appear in red. Countries highlighted in the theme's primary color are part of the predefined filterable list.
             Saving changes will (mock) apply these blocking rules.
         </p>
-        <div className="flex justify-end">
-            <Button onClick={handleSaveChanges} className="font-body">Save Blocking Settings</Button>
-        </div>
       </CardContent>
+      <CardFooter className="flex justify-end gap-2">
+        <Button onClick={handleResetToDefaults} variant="outline" className="font-body">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
+        </Button>
+        <Button onClick={handleSaveChanges} className="font-body">
+            <Save className="mr-2 h-4 w-4" /> Save Settings
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

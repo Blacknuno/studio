@@ -8,19 +8,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { initialPanelSettings, PanelSettingsData } from "@/app/users/user-data";
-import { ShieldQuestion, Save, CheckCircle, XCircle, Wifi, BarChart3 } from "lucide-react";
+import { initialPanelSettings, defaultInitialPanelSettings } from "@/app/users/user-data";
+import { ShieldQuestion, Save, CheckCircle, XCircle, Wifi, BarChart3, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
 export function WarpServiceTab() {
   const { toast } = useToast();
+  // Local state for the form, initialized from global mock settings
   const [isEnabled, setIsEnabled] = React.useState(initialPanelSettings.warpService.isEnabled);
   const [licenseKey, setLicenseKey] = React.useState(initialPanelSettings.warpService.licenseKey);
-  const [isLicenseValid, setIsLicenseValid] = React.useState<boolean | null>(null); // null: unchecked, true: valid, false: invalid
+  
+  // Local state for validation and API status, separate from form data being saved
+  const [isLicenseValid, setIsLicenseValid] = React.useState<boolean | null>(null); 
   const [apiHandshakeStatus, setApiHandshakeStatus] = React.useState<"Connected" | "Disconnected" | "Error">("Disconnected");
 
+  React.useEffect(() => {
+    // When initialPanelSettings (global mock) changes, update local state
+    setIsEnabled(initialPanelSettings.warpService.isEnabled);
+    setLicenseKey(initialPanelSettings.warpService.licenseKey);
+    // Reset validation status if license key from global state is empty or changes significantly
+    if (!initialPanelSettings.warpService.licenseKey) {
+        setIsLicenseValid(null);
+        setApiHandshakeStatus("Disconnected");
+    }
+  }, [initialPanelSettings.warpService.isEnabled, initialPanelSettings.warpService.licenseKey]);
+
+
   const handleValidateLicense = () => {
-    // Mock license validation
     if (licenseKey.startsWith("WARP-VALID-")) {
       setIsLicenseValid(true);
       setApiHandshakeStatus("Connected");
@@ -33,12 +47,32 @@ export function WarpServiceTab() {
   };
 
   const handleSaveChanges = () => {
+    // Update the global mock settings object
     initialPanelSettings.warpService.isEnabled = isEnabled;
     initialPanelSettings.warpService.licenseKey = licenseKey;
-    // In a real app, save this to your backend.
+    // In a real app, also persist isLicenseValid and apiHandshakeStatus if needed, or re-validate on load.
+    // For this mock, they are transient UI states post-validation.
     toast({
       title: "Warp Service Settings Saved",
-      description: `Warp service settings have been updated (mocked).`,
+      description: `Warp service settings have been (mock) updated.`,
+    });
+  };
+
+  const handleResetToDefaults = () => {
+    // Reset local form state to pristine defaults
+    setIsEnabled(defaultInitialPanelSettings.warpService.isEnabled);
+    setLicenseKey(defaultInitialPanelSettings.warpService.licenseKey);
+    // Reset validation and API status
+    setIsLicenseValid(null);
+    setApiHandshakeStatus("Disconnected");
+
+    // Update the global mock settings object
+    initialPanelSettings.warpService = JSON.parse(JSON.stringify(defaultInitialPanelSettings.warpService));
+    
+    toast({
+      title: "Warp Service Settings Reset",
+      description: "Warp service configurations have been reset to defaults (mocked).",
+      variant: "default"
     });
   };
 
@@ -63,7 +97,7 @@ export function WarpServiceTab() {
             checked={isEnabled}
             onCheckedChange={setIsEnabled}
             aria-label="Enable Warp Service"
-            disabled={!isLicenseValid} // Can only enable if license is valid
+            disabled={!isLicenseValid} 
           />
         </div>
 
@@ -75,7 +109,7 @@ export function WarpServiceTab() {
               value={licenseKey}
               onChange={(e) => {
                 setLicenseKey(e.target.value);
-                setIsLicenseValid(null); // Reset validation status on key change
+                setIsLicenseValid(null); 
                 setApiHandshakeStatus("Disconnected");
               }}
               placeholder="Enter your Warp license key"
@@ -118,13 +152,14 @@ export function WarpServiceTab() {
         </div>
 
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex justify-end gap-2">
+        <Button onClick={handleResetToDefaults} variant="outline" className="font-body">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
+        </Button>
         <Button onClick={handleSaveChanges} className="font-body">
-          <Save className="mr-2 h-4 w-4" /> Save Warp Settings
+          <Save className="mr-2 h-4 w-4" /> Save Settings
         </Button>
       </CardFooter>
     </Card>
   );
 }
-
-    

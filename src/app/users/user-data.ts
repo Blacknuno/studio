@@ -248,7 +248,7 @@ export type User = {
   };
 };
 
-export const mockUsers: User[] = []; // Start with an empty user list
+export const mockUsers: User[] = []; // Start with an empty user list as per requirement
 
 export function calculateExpiresOn(createdAt: string, validityPeriodDays: number): string {
   const createdDate = new Date(createdAt);
@@ -297,7 +297,7 @@ export type ManagedHost = {
 
 
 export type PanelSettingsData = {
-  ipAddress: string; // This will be displayed as "N/A" or "Set by server"
+  ipAddress: string; 
   loginPort: number;
   loginPath: string;
   username: string; 
@@ -316,12 +316,13 @@ export type PanelSettingsData = {
   loginPageBackgroundImageUrl?: string; 
 };
 
-export const DEFAULT_USERNAME_FOR_SETUP = "admin"; // Updated to 'admin' as per new script
+export const DEFAULT_USERNAME_FOR_SETUP = "admin"; // Matches install.sh DEFAULT_USER
 
-export const initialPanelSettings: PanelSettingsData = {
+// These are the pristine default values for settings that can be reset.
+export const defaultInitialPanelSettings: Readonly<PanelSettingsData> = Object.freeze({
   ipAddress: "N/A (Set by server .env)", 
-  loginPort: 3000, // Changed to 3000 to match install script
-  loginPath: "/paneladmin", // Changed to /paneladmin
+  loginPort: 3000, 
+  loginPath: "/paneladmin", 
   username: DEFAULT_USERNAME_FOR_SETUP, 
   telegramBotToken: "",
   telegramAdminChatId: "",
@@ -346,7 +347,12 @@ export const initialPanelSettings: PanelSettingsData = {
       isEnabled: true, 
   },
   loginPageBackgroundImageUrl: "https://placehold.co/1920x1080.png", 
-};
+});
+
+// This is the mutable state that the panel UI interacts with.
+// It's initialized from defaultInitialPanelSettings but can be changed by "Save Settings" actions.
+export let initialPanelSettings: PanelSettingsData = JSON.parse(JSON.stringify(defaultInitialPanelSettings));
+
 
 export type ServerNodeStatus = 'Online' | 'Offline' | 'Error' | 'Connecting';
 export type ServerNodeConnectionType = 'grpclib' | 'websocket' | 'tcp' | 'other';
@@ -444,9 +450,6 @@ export const mockManagedHosts: ManagedHost[] = [
   },
 ];
 
-// This was previously XrayInboundSetting but seems to be used for Xray settings globally.
-// If Xray inbounds are configured elsewhere (e.g. Managed Hosts or raw Xray config), this might be redundant.
-// For now, keeping it as it was used by `XrayInboundsCard`.
 export type XrayInboundSetting = { 
   id: string;
   tag: string;
@@ -456,11 +459,9 @@ export type XrayInboundSetting = {
   streamSettings: string; 
   isEnabled: boolean;
 };
-// This needs to be initialized if XrayInboundsCard is still used.
-// For consistency with "Managed Hosts" taking over detailed Xray config, this might be better removed or re-evaluated.
-// If `initialPanelSettings` had an `xrayInbounds` property, it should be initialized here.
-// initialPanelSettings.xrayInbounds = []; // Example if it were part of PanelSettingsData
-    
-
-
+// Initialize initialPanelSettings.xrayInbounds if it was intended to be part of PanelSettingsData
+// This was removed earlier but if XrayInboundsCard is to be used, it needs a source.
+// For now, assuming it's not part of the core `initialPanelSettings` directly.
+// If you need the XrayInboundsCard functional, we'd add an `xrayInbounds: XrayInboundSetting[]` to PanelSettingsData
+// and initialize it in defaultInitialPanelSettings, e.g., xrayInbounds: []
     

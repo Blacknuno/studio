@@ -9,13 +9,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { initialPanelSettings } from "@/app/users/user-data";
-import { Globe, KeyRound, FileLock2 } from "lucide-react";
+import { initialPanelSettings, defaultInitialPanelSettings } from "@/app/users/user-data";
+import { Globe, KeyRound, FileLock2, Save, RotateCcw } from "lucide-react";
 
 export function DomainSettingsCard() {
   const { toast } = useToast();
@@ -23,12 +24,38 @@ export function DomainSettingsCard() {
   const [sslPrivateKey, setSslPrivateKey] = React.useState(initialPanelSettings.sslPrivateKey);
   const [sslCertificate, setSslCertificate] = React.useState(initialPanelSettings.sslCertificate);
 
+  // Update local state if global initialPanelSettings change (e.g., after a reset from another component if state was global)
+  React.useEffect(() => {
+    setDomainName(initialPanelSettings.domainName);
+    setSslPrivateKey(initialPanelSettings.sslPrivateKey);
+    setSslCertificate(initialPanelSettings.sslCertificate);
+  }, [initialPanelSettings.domainName, initialPanelSettings.sslPrivateKey, initialPanelSettings.sslCertificate]);
+
+
   const handleSaveChanges = () => {
-    // In a real app, you'd securely save these to a backend and apply them.
-    console.log("Saving domain settings:", { domainName, sslPrivateKey, sslCertificate });
+    initialPanelSettings.domainName = domainName;
+    initialPanelSettings.sslPrivateKey = sslPrivateKey;
+    initialPanelSettings.sslCertificate = sslCertificate;
     toast({
       title: "Domain Settings Saved",
-      description: "Domain name and SSL/TLS settings have been updated (mocked).",
+      description: "Domain name and SSL/TLS settings have been (mock) updated.",
+    });
+  };
+
+  const handleResetToDefaults = () => {
+    setDomainName(defaultInitialPanelSettings.domainName);
+    setSslPrivateKey(defaultInitialPanelSettings.sslPrivateKey);
+    setSslCertificate(defaultInitialPanelSettings.sslCertificate);
+    
+    // Also update the 'live' settings object if it's being modified directly
+    initialPanelSettings.domainName = defaultInitialPanelSettings.domainName;
+    initialPanelSettings.sslPrivateKey = defaultInitialPanelSettings.sslPrivateKey;
+    initialPanelSettings.sslCertificate = defaultInitialPanelSettings.sslCertificate;
+
+    toast({
+      title: "Domain Settings Reset",
+      description: "Domain name and SSL/TLS settings have been reset to defaults (mocked).",
+      variant: "default",
     });
   };
 
@@ -88,10 +115,15 @@ export function DomainSettingsCard() {
             Paste your SSL certificate, including any intermediate certificates, in PEM format.
           </p>
         </div>
-        <div className="flex justify-end">
-            <Button onClick={handleSaveChanges} className="font-body">Save Domain Settings</Button>
-        </div>
       </CardContent>
+      <CardFooter className="flex justify-end gap-2">
+        <Button onClick={handleResetToDefaults} variant="outline" className="font-body">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
+        </Button>
+        <Button onClick={handleSaveChanges} className="font-body">
+            <Save className="mr-2 h-4 w-4" /> Save Settings
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

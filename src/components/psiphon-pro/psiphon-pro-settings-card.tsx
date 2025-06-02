@@ -13,8 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { kernels, availableCountries, type PsiphonProConfig, type Kernel } from "@/app/users/user-data";
-import { Route, Save, Settings, Globe, Gauge, Server } from "lucide-react";
+import { kernels, availableCountries, type PsiphonProConfig, defaultInitialPanelSettings } from "@/app/users/user-data"; // Added defaultInitialPanelSettings
+import { Route, Save, Settings, Globe, Gauge, Server, RotateCcw } from "lucide-react";
 
 const psiphonKernel = kernels.find(k => k.id === 'psiphon-pro');
 
@@ -24,59 +24,63 @@ const psiphonSettingsSchema = z.object({
   enableCountrySelection: z.boolean(),
   selectedCountries: z.array(z.string()),
   customServerList: z.string().optional(),
-  bandwidthLimitMbps: z.coerce.number().min(0).optional(), // 0 for unlimited
+  bandwidthLimitMbps: z.coerce.number().min(0).optional(), 
 });
 
 type PsiphonSettingsFormData = z.infer<typeof psiphonSettingsSchema>;
 
 export function PsiphonProSettingsCard() {
   const { toast } = useToast();
-  const [kernelConfig, setKernelConfig] = React.useState<PsiphonProConfig | null>(
+  
+  // Local state for the form, initialized from the Psiphon kernel's config
+  const [currentKernelConfig, setCurrentKernelConfig] = React.useState<PsiphonProConfig | null>(
     psiphonKernel?.config && 'ports' in psiphonKernel.config ? psiphonKernel.config as PsiphonProConfig : null
   );
 
   const form = useForm<PsiphonSettingsFormData>({
     resolver: zodResolver(psiphonSettingsSchema),
     defaultValues: {
-      ports: kernelConfig?.ports?.join(", ") || "1080, 8081",
-      transportMode: kernelConfig?.transportMode || 'OBFUSCATED_SSH',
-      enableCountrySelection: kernelConfig?.enableCountrySelection || true,
-      selectedCountries: kernelConfig?.selectedCountries || ["CA", "DE"],
-      customServerList: kernelConfig?.customServerList || "",
-      bandwidthLimitMbps: kernelConfig?.bandwidthLimitMbps || 0,
+      ports: currentKernelConfig?.ports?.join(", ") || "1080, 8081",
+      transportMode: currentKernelConfig?.transportMode || 'OBFUSCATED_SSH',
+      enableCountrySelection: currentKernelConfig?.enableCountrySelection || true,
+      selectedCountries: currentKernelConfig?.selectedCountries || ["CA", "DE"],
+      customServerList: currentKernelConfig?.customServerList || "",
+      bandwidthLimitMbps: currentKernelConfig?.bandwidthLimitMbps || 0,
     },
   });
 
+  // Effect to update form if the kernel config changes globally (e.g. after a reset)
   React.useEffect(() => {
-    if (kernelConfig) {
+    const updatedKernelConf = kernels.find(k => k.id === 'psiphon-pro')?.config as PsiphonProConfig | undefined;
+    setCurrentKernelConfig(updatedKernelConf || null);
+    if (updatedKernelConf) {
       form.reset({
-        ports: kernelConfig.ports.join(", "),
-        transportMode: kernelConfig.transportMode,
-        enableCountrySelection: kernelConfig.enableCountrySelection,
-        selectedCountries: kernelConfig.selectedCountries,
-        customServerList: kernelConfig.customServerList || "",
-        bandwidthLimitMbps: kernelConfig.bandwidthLimitMbps || 0,
+        ports: updatedKernelConf.ports.join(", "),
+        transportMode: updatedKernelConf.transportMode,
+        enableCountrySelection: updatedKernelConf.enableCountrySelection,
+        selectedCountries: updatedKernelConf.selectedCountries,
+        customServerList: updatedKernelConf.customServerList || "",
+        bandwidthLimitMbps: updatedKernelConf.bandwidthLimitMbps || 0,
       });
     }
-  }, [kernelConfig, form]);
+  }, [kernels, form]); // Dependency on the global kernels array
 
   const onSubmit = (data: PsiphonSettingsFormData) => {
-    if (psiphonKernel && kernelConfig) {
-      const updatedKernelConfig: PsiphonProConfig = {
-        ...kernelConfig,
-        ports: data.ports,
-        transportMode: data.transportMode,
-        enableCountrySelection: data.enableCountrySelection,
-        selectedCountries: data.selectedCountries,
-        customServerList: data.customServerList,
-        bandwidthLimitMbps: data.bandwidthLimitMbps,
-      };
-      
+    if (psiphonKernel) {
       const psiphonKernelIndex = kernels.findIndex(k => k.id === 'psiphon-pro');
       if (psiphonKernelIndex !== -1) {
-        kernels[psiphonKernelIndex].config = updatedKernelConfig;
+        const currentConf = kernels[psiphonKernelIndex].config as PsiphonProConfig;
+        kernels[psiphonKernelIndex].config = {
+          ...currentConf,
+          ports: data.ports,
+          transportMode: data.transportMode,
+          enableCountrySelection: data.enableCountrySelection,
+          selectedCountries: data.selectedCountries,
+          customServerList: data.customServerList,
+          bandwidthLimitMbps: data.bandwidthLimitMbps,
+        };
+        setCurrentKernelConfig(kernels[psiphonKernelIndex].config as PsiphonProConfig); // Update local state
       }
-      setKernelConfig(updatedKernelConfig);
       
       toast({
         title: "Psiphon Pro Settings Saved",
@@ -91,7 +95,36 @@ export function PsiphonProSettingsCard() {
     }
   };
 
-  if (!psiphonKernel || !kernelConfig) {
+  const handleResetToDefaults = () => {
+    if (psiphonKernel) {
+        // Assuming default Psiphon config is stored similarly or define it here
+        const defaultPsiphonConfig = (defaultInitialPanelSettings.kernelsConfig?.psiphonPro as PsiphonProConfig | undefined) 
+                                     || { ports: [1080, 8081], transportMode: 'OBFUSCATED_SSH', enableCountrySelection: true, selectedCountries: ["CA", "DE"], customServerList: "", bandwidthLimitMbps: 0 };
+        
+        const psiphonKernelIndex = kernels.findIndex(k => k.id === 'psiphon-pro');
+        if (psiphonKernelIndex !== -1) {
+            kernels[psiphonKernelIndex].config = JSON.parse(JSON.stringify(defaultPsiphonConfig));
+            setCurrentKernelConfig(kernels[psiphonKernelIndex].config as PsiphonProConfig); // Update local state
+        }
+
+        form.reset({
+            ports: defaultPsiphonConfig.ports.join(", "),
+            transportMode: defaultPsiphonConfig.transportMode,
+            enableCountrySelection: defaultPsiphonConfig.enableCountrySelection,
+            selectedCountries: defaultPsiphonConfig.selectedCountries,
+            customServerList: defaultPsiphonConfig.customServerList || "",
+            bandwidthLimitMbps: defaultPsiphonConfig.bandwidthLimitMbps || 0,
+        });
+        
+        toast({
+          title: "Psiphon Pro Settings Reset",
+          description: "Psiphon Pro configurations have been reset to defaults (mocked).",
+          variant: "default"
+        });
+    }
+  };
+
+  if (!psiphonKernel || !currentKernelConfig) {
     return (
       <Card>
         <CardHeader>
@@ -217,14 +250,15 @@ export function PsiphonProSettingsCard() {
               {form.formState.errors.customServerList && <p className="text-sm text-destructive mt-1">{form.formState.errors.customServerList.message}</p>}
             </div>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="font-body">
-            <Save className="mr-2 h-4 w-4" /> Save Psiphon Pro Settings
-          </Button>
+        <CardFooter className="flex justify-end gap-2">
+            <Button onClick={handleResetToDefaults} variant="outline" className="font-body">
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset to Defaults
+            </Button>
+            <Button type="submit" className="font-body">
+                <Save className="mr-2 h-4 w-4" /> Save Settings
+            </Button>
         </CardFooter>
       </form>
     </Card>
   );
 }
-
-    
