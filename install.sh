@@ -4,11 +4,10 @@
 # This script automates the deployment of the ProtocolPilot Next.js application.
 
 # --- BEGIN USER CONFIGURATION ---
-# IMPORTANT: Before using this script, replace the placeholder URL below
-# with the ACTUAL HTTPS URL of YOUR ProtocolPilot application's GitHub repository.
-# For example: APP_REPO_URL="https://github.com/your-username/your-protocolpilot-repo.git"
+# IMPORTANT: This script is pre-configured for a specific repository.
+# If you need to install a different application, this URL must be changed.
 
-APP_REPO_URL="https://github.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO.git" # <<<!!! EDIT THIS LINE before hosting this script !!!>>>
+APP_REPO_URL="https://github.com/Blacknuno/studio.git" # <<< Pre-configured Repository URL >>>
 
 # Optional: Define the directory name for the application and where it will be installed.
 APP_DIR_NAME="protocolpilot"
@@ -43,21 +42,18 @@ print_info() {
 
 # --- Validate Configuration ---
 print_step "Validating script configuration..."
-if [ "$APP_REPO_URL" == "https://github.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO.git" ]; then
-    print_warning "CRITICAL: The APP_REPO_URL in the installation script is still the placeholder."
-    print_warning "Please download this script, edit the APP_REPO_URL variable at the top to point to"
-    print_warning "your ProtocolPilot application's GitHub repository URL, host the edited script,"
-    print_warning "and then run it using the new raw URL."
-    print_warning "Installation cannot proceed with the placeholder URL."
+if [ "$APP_REPO_URL" == "https://github.com/YOUR_USERNAME/YOUR_PROTOCOLPILOT_REPO.git" ] || [ -z "$APP_REPO_URL" ]; then
+    print_warning "CRITICAL: The APP_REPO_URL in the installation script is still a placeholder or empty."
+    print_warning "This script should be pre-configured. If you see this message, the script needs to be updated with the correct repository URL."
     exit 1
 fi
 if [[ ! "$APP_REPO_URL" =~ ^https://github\.com/.+\.git$ ]]; then
     print_warning "CRITICAL: The APP_REPO_URL ('$APP_REPO_URL') does not look like a valid GitHub HTTPS clone URL."
     print_warning "It should be in the format: https://github.com/username/repository.git"
-    print_warning "Please edit the APP_REPO_URL variable in the script and try again."
+    print_warning "Please check the APP_REPO_URL variable in the script."
     exit 1
 fi
-print_success "Script configuration seems valid. Repository URL: $APP_REPO_URL"
+print_success "Script configuration is valid. Using Repository URL: $APP_REPO_URL"
 
 
 # --- Prerequisites and Setup ---
@@ -111,11 +107,9 @@ if command -v pm2 >/dev/null 2>&1; then
     print_info "PM2 is already installed: $(pm2 --version)"
 else
     print_info "Attempting to install PM2 globally using sudo and nvm's npm..."
-    # Ensure we use the npm installed by nvm, even with sudo
     if [ -f "$NVM_DIR/versions/node/$(nvm current)/bin/npm" ]; then
         sudo "$NVM_DIR/versions/node/$(nvm current)/bin/npm" install pm2 -g
         print_success "PM2 installation command executed."
-        # Verify PM2 installation path and command availability
         if command -v pm2 >/dev/null 2>&1; then
             print_success "PM2 is now installed: $(pm2 --version)"
             print_info "PM2 path: $(which pm2)"
@@ -166,10 +160,6 @@ print_success "Application built successfully."
 
 # --- Setup PM2 ---
 print_step "Setting up ProtocolPilot with PM2..."
-# Ensure pm2 command is available in PATH for the user running the script
-# NVM should have configured this, but pm2 might be in a sudo-accessible global path now
-# Example: /usr/local/bin/pm2 or somewhere in nvm's global bin path
-# The pm2 command from "command -v pm2" should be used by pm2 commands below
 PM2_PATH=$(command -v pm2)
 if [ -z "$PM2_PATH" ]; then
     print_warning "PM2 command not found after installation. Cannot proceed with PM2 setup."
@@ -178,40 +168,24 @@ fi
 
 print_info "Using PM2 from: $PM2_PATH"
 
-# Check if the app is already managed by PM2
 if "$PM2_PATH" list | grep -q "$APP_DIR_NAME"; then
     print_info "Application '$APP_DIR_NAME' is already managed by PM2. Restarting..."
     "$PM2_PATH" restart "$APP_DIR_NAME" --update-env
 else
     print_info "Starting application '$APP_DIR_NAME' with PM2..."
-    # Use `npm run start` which respects package.json's start script (e.g., port)
     "$PM2_PATH" start npm --name "$APP_DIR_NAME" -- run start
     print_success "Application started with PM2."
 fi
 
-# Configure PM2 to start on system boot
 print_step "Configuring PM2 to start on system boot..."
-# The command `pm2 startup` generates a command that needs to be run with sudo.
-# We capture and execute it.
-# Ensure the pm2 used here is the one we intend (globally installed one).
-# The 'env PATH=$PATH:$NVM_DIR/versions/node/$(nvm current)/bin' part is crucial
-# if pm2 startup script itself needs to find node/npm.
 CURRENT_USER=$(whoami)
 NODE_BIN_PATH="$NVM_DIR/versions/node/$(nvm current)/bin"
 
-# Generate the startup command. It will output a command to run.
-# We need to capture this command.
-# The output can be something like:
-# [PM2] To setup the Startup Script, copy/paste the following command:
-# sudo env PATH=$PATH:/home/user/.nvm/versions/node/vX.Y.Z/bin /home/user/.nvm/versions/node/vX.Y.Z/lib/node_modules/pm2/bin/pm2 startup systemd -u user --hp /home/user
-# We will try to execute this automatically.
-# The following is a bit fragile as it depends on PM2's output format.
 PM2_STARTUP_CMD_OUTPUT=$("$PM2_PATH" startup systemd -u "$CURRENT_USER" --hp "$HOME" | grep 'sudo env PATH')
 
 if [ -n "$PM2_STARTUP_CMD_OUTPUT" ]; then
     print_info "Attempting to execute PM2 startup command automatically:"
     echo "$PM2_STARTUP_CMD_OUTPUT"
-    # Extract the command part
     PM2_EXEC_CMD=$(echo "$PM2_STARTUP_CMD_OUTPUT" | sed -n 's/.*\(sudo env PATH.*\)/\1/p')
     if [ -n "$PM2_EXEC_CMD" ]; then
         eval "$PM2_EXEC_CMD"
@@ -232,13 +206,11 @@ print_success "PM2 startup configuration saved."
 print_step "🎉 ProtocolPilot Installation Complete! 🎉"
 
 SERVER_IP=$(hostname -I | awk '{print $1}')
-# Attempt to read port from package.json start script, default to 3000
 PANEL_PORT=$(grep -oP '"start":\s*"next start(-p\s+\K[0-9]+)?' package.json | grep -oP '[0-9]+$' || echo "3000")
 
-# These are defaults from your app's user-data.ts or similar
-LOGIN_PATH="/paneladmin" # Default from initialPanelSettings in user-data.ts
-DEFAULT_USERNAME="admin_please_change" # Default from initialPanelSettings
-DEFAULT_PASSWORD="password" # Default password
+LOGIN_PATH="/paneladmin" 
+DEFAULT_USERNAME="admin_please_change" 
+DEFAULT_PASSWORD="password"
 
 print_info "Your ProtocolPilot panel should be accessible at:"
 echo "   👉 http://$SERVER_IP:$PANEL_PORT"
@@ -265,11 +237,10 @@ echo "Example Nginx server block (save to /etc/nginx/sites-available/protocolpil
 cat << EOF
 server {
     listen 80;
-    # For IPv6, add: listen [::]:80;
-    server_name your_domain.com_or_server_ip; # Replace with your domain or server IP
+    server_name your_domain.com_or_server_ip; 
 
     location / {
-        proxy_pass http://localhost:$PANEL_PORT; # Points to your Next.js app
+        proxy_pass http://localhost:$PANEL_PORT; 
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -279,20 +250,14 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
     }
-
-    # Optional: Add error pages, access logs, etc.
-    # access_log /var/log/nginx/protocolpilot.access.log;
-    # error_log /var/log/nginx/protocolpilot.error.log;
 }
 EOF
 echo ""
 echo "After creating the Nginx config (e.g., /etc/nginx/sites-available/protocolpilot):"
 echo "  1. sudo ln -s /etc/nginx/sites-available/protocolpilot /etc/nginx/sites-enabled/"
-echo "  2. sudo nginx -t                            (Test configuration)"
-echo "  3. sudo systemctl restart nginx             (Restart Nginx)"
+echo "  2. sudo nginx -t"
+echo "  3. sudo systemctl restart nginx"
 echo "  4. Consider setting up SSL using Certbot: sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx"
 echo ""
 print_success "Installation script finished. Enjoy ProtocolPilot!"
 exit 0
-
-    
