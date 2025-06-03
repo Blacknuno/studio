@@ -1,265 +1,260 @@
 #!/bin/bash
-# ProtocolPilot Installation Script (Fixed Version)
+# ProtocolPilot Installation Script with Interactive Menu
 
 # Configuration
 APP_REPO_URL="https://github.com/Blacknuno/studio.git"
 APP_DIR_NAME="protocolpilot"
-INSTALL_PATH="$HOME/$APP_DIR_NAME" # Installs in the home directory of the user running the script
+INSTALL_PATH="$HOME/$APP_DIR_NAME"
+DEFAULT_PORT=3000
 DEFAULT_USER="admin"
-DEFAULT_PASS=$(openssl rand -base64 12) # Generate random password
+TEMP_PASS=$(openssl rand -base64 12) # Temporary random password
 
-set -e # Exit immediately if a command exits with a non-zero status.
-
-echo "🚀 Starting ProtocolPilot Installation..."
-echo "   Installation Path: $INSTALL_PATH"
-echo "   Default Admin User: $DEFAULT_USER"
-echo "   (A random password will be generated for this user)"
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
 # --- Helper Functions ---
+show_menu() {
+    clear
+    echo -e "${GREEN}=== ProtocolPilot Management ===${NC}"
+    echo "1) Install Panel"
+    echo "2) Update Panel"
+    echo "3) Uninstall Panel"
+    echo "4) Change Settings"
+    echo "5) Exit"
+    echo -e "${YELLOW}===============================${NC}"
+}
+
 show_step() {
     echo ""
-    echo "------------------------------------"
-    echo "➡️  $1"
+    echo -e "${GREEN}➡️  $1${NC}"
     echo "------------------------------------"
 }
 
-# --- Fix npm path for sudo ---
-# This function attempts to make nvm-installed node/npm available to sudo.
-# This is often a point of failure if not handled correctly.
-fix_npm_path() {
-    if ! sudo npm -v &> /dev/null; then
-        echo "Configuring npm path for sudo..."
-        if command -v npm &> /dev/null && command -v node &> /dev/null; then
-            sudo ln -sf "$(which npm)" /usr/local/bin/npm
-            sudo ln -sf "$(which node)" /usr/local/bin/node
-            export PATH="$PATH:/usr/local/bin" # For current session
-            echo "npm and node links created in /usr/local/bin"
-        else
-            echo "⚠️ WARNING: npm or node not found in user PATH. Sudo npm might fail."
-        fi
-    else
-        echo "npm path for sudo seems OK."
+show_error() {
+    echo -e "${RED}❌ Error: $1${NC}"
+}
+
+show_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+show_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+check_requirements() {
+    if ! command -v git &> /dev/null; then
+        sudo apt update && sudo apt install -y git
+    fi
+    
+    if ! command -v node &> /dev/null || ! node -v | grep -q "v18\|v20\|v22"; then
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
+    
+    if ! command -v pm2 &> /dev/null; then
+        sudo npm install -g pm2
     fi
 }
 
-# --- System Preparation ---
-show_step "System Preparation (Updating package lists and installing essentials)"
-sudo apt update
-sudo apt install -y git curl wget nginx # Nginx installed, configuration is manual later
+create_env_file() {
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    PANEL_PORT=${1:-$DEFAULT_PORT}
+    ADMIN_USER=${2:-$DEFAULT_USER}
+    ADMIN_PASS=${3:-$TEMP_PASS}
 
-# --- Node.js Installation (using Nodesource for stability) ---
-if ! command -v node &> /dev/null || ! node -v | grep -q "v18\|v20\|v22"; then # Check for Node or a recent version
-    show_step "Installing Node.js (LTS via Nodesource)"
-    # Using Nodesource is generally more reliable than older distro versions or complex NVM setups in scripts
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-else
-    echo "Node.js is already installed: $(node -v)"
-fi
-echo "Node version: $(node -v)"
-echo "npm version: $(npm -v)"
-
-
-# --- npm Fix (Run after Node.js ensures npm is available) ---
-# fix_npm_path # This was problematic; direct sudo npm may work better with Nodesource path.
-
-# --- PM2 Installation ---
-show_step "Installing PM2 globally using sudo npm"
-# Ensure npm is available to sudo. Nodesource often sets this up correctly.
-if sudo npm install -g pm2; then
-    echo "✅ PM2 installed successfully."
-else
-    echo "⚠️ PM2 installation failed. Please check npm/Node.js setup."
-    exit 1
-fi
-# Verify PM2 installation
-if ! command -v pm2 &> /dev/null && ! sudo pm2 -v &> /dev/null ; then
-    echo "🔴 CRITICAL: PM2 command not found after installation attempt. Exiting."
-    echo "   This might be due to PATH issues. Ensure /usr/local/bin (or npm global bin path) is in root's secure_path or user's PATH for sudo."
-    exit 1
-fi
-echo "PM2 version: $(sudo pm2 -v)"
-
-
-# --- Application Setup ---
-show_step "Cloning Repository: $APP_REPO_URL"
-if [ -d "$INSTALL_PATH" ]; then
-    echo "Removing existing application directory: $INSTALL_PATH"
-    sudo rm -rf "$INSTALL_PATH" # Use sudo if script runs as non-root but needs to manage this dir
-fi
-# Clone as the current user
-if git clone "$APP_REPO_URL" "$INSTALL_PATH"; then
-    echo "✅ Repository cloned successfully to $INSTALL_PATH"
-else
-    echo "⚠️ Failed to clone repository. Please check URL and network."
-    exit 1
-fi
-
-cd "$INSTALL_PATH"
-echo "Changed directory to $(pwd)"
-
-# Create environment file with real system data
-# This .env file is read by the Next.js application at runtime (if configured) or build time.
-# The Panel UI does not dynamically update these core server settings from this .env file.
-# Changes to PORT or REAL_IP here require an application restart.
-SERVER_IP=$(hostname -I | awk '{print $1}')
-# Ensure .env file has correct permissions if needed, though typically app reads it.
-show_step "Creating .env file for application configuration"
-cat > .env <<EOL
-# This file is automatically generated by install.sh
-# It contains core environment variables for the ProtocolPilot application.
-# Settings like REAL_IP and PORT are used by the server/application on startup.
-# The Panel UI will display these values but does not directly modify them here post-installation.
-
-# Server Configuration (read at startup)
+    cat > "$INSTALL_PATH/.env" <<EOL
+# ProtocolPilot Configuration
 REAL_IP=$SERVER_IP
-PORT=3000
-
-# Initial Admin Credentials (for first login)
-# These are used by the panel for initial setup. Change them via the Panel Settings.
-ADMIN_USER=$DEFAULT_USER
-ADMIN_PASS=$DEFAULT_PASS
-
-# Example for Next.js public variables (accessible in frontend)
-# NEXT_PUBLIC_APP_NAME="ProtocolPilot"
+PORT=$PANEL_PORT
+ADMIN_USER=$ADMIN_USER
+ADMIN_PASS=$ADMIN_PASS
+NODE_ENV=production
 EOL
-echo ".env file created in $INSTALL_PATH/.env"
-echo "Contents of .env:"
-cat .env # Show content for verification
+}
 
-show_step "Installing Application Dependencies (npm install)"
-# Run npm install as the user who owns the directory, if possible, or ensure permissions allow it.
-if npm install; then
-    echo "✅ Application dependencies installed."
-else
-    echo "⚠️ Failed to install application dependencies. Check for errors above."
-    exit 1
-fi
-
-show_step "Building ProtocolPilot application (npm run build)"
-if npm run build; then
-    echo "✅ Application built successfully."
-else
-    echo "⚠️ Failed to build application. Check for errors above."
-    exit 1
-fi
-
-show_step "Setting up ProtocolPilot with PM2"
-# Ensure PM2 can find Node.js, path might be an issue with sudo
-# The `fix_npm_path` was intended to help, but direct path to pm2 can be more robust if linked by nodesource.
-PM2_CMD=$(command -v pm2 || echo "/usr/local/bin/pm2") # Fallback if not in sudo path but linked by npm -g
-
-# Stop and delete any existing process with the same name to ensure a clean start
-if sudo $PM2_CMD list | grep -q "$APP_DIR_NAME"; then
-    echo "Application '$APP_DIR_NAME' is already managed by PM2. Stopping and deleting old process..."
-    sudo $PM2_CMD stop "$APP_DIR_NAME" || true # Ignore error if already stopped
-    sudo $PM2_CMD delete "$APP_DIR_NAME" || true # Ignore error if not found
-fi
-
-echo "Starting application '$APP_DIR_NAME' with PM2..."
-# The `npm start` script in package.json is `next start` (which uses port 3000 by default as per our .env)
-# Run pm2 with the user who owns the files if possible, or ensure sudo pm2 has correct context.
-# `pm2 start npm --name "appname" -- run start`
-# We need to ensure pm2 runs the `npm start` from within the $INSTALL_PATH
-cd "$INSTALL_PATH"
-if sudo $PM2_CMD start npm --name "$APP_DIR_NAME" -- run start; then
-    echo "✅ Application started with PM2."
-else
-    echo "⚠️ Failed to start application with PM2."
-    echo "   Check PM2 logs: sudo pm2 logs $APP_DIR_NAME"
-    exit 1
-fi
-
-sudo $PM2_CMD save # Save current process list so it restarts on reboot
-# Setup PM2 to start on boot
-# The output of this command needs to be run by the user if it doesn't run automatically
-# It usually prints a command like: sudo env PATH=$PATH:/usr/bin /usr/local/bin/pm2 startup systemd -u youruser --hp /home/youruser
-echo "Configuring PM2 to start on system boot..."
-# Attempt to get the startup command and execute it. This can be tricky due to user context.
-# The command PM2 generates needs to be run with sudo and often includes specific user/home paths.
-# Simpler: instruct user if automatic execution is complex/fails.
-# The `pm2 startup` command itself will output the command to run.
-# We execute it with sudo, which should pick the system's systemd.
-PM2_STARTUP_CMD_OUTPUT=$(sudo $PM2_CMD startup systemd -u "$(whoami)" --hp "$HOME" 2>&1)
-echo "PM2 Startup Command Output:"
-echo "$PM2_STARTUP_CMD_OUTPUT"
-if echo "$PM2_STARTUP_CMD_OUTPUT" | grep -q "command is:" || echo "$PM2_STARTUP_CMD_OUTPUT" | grep -q "sudo env PATH"; then
-    # Try to extract and run the command
-    # This is a common pattern for the output: [PM2] You have to run this command as root. Execute the following command:
-    # sudo env PATH=$PATH:/home/ubuntu/.nvm/versions/node/v20.14.0/bin /home/ubuntu/.nvm/versions/node/v20.14.0/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu
-    EXEC_CMD=$(echo "$PM2_STARTUP_CMD_OUTPUT" | grep 'sudo env PATH' | sed 's/.*Execute the following command: //')
-    if [ -n "$EXEC_CMD" ]; then
-        echo "Attempting to execute PM2 startup command automatically:"
-        echo "$EXEC_CMD"
-        if eval "$EXEC_CMD"; then
-            echo "✅ PM2 startup command executed successfully."
-        else
-            echo "⚠️ Failed to execute PM2 startup command automatically. You may need to run it manually from the output above."
-        fi
-    else
-        echo "Could not automatically parse PM2 startup command. Please run the command shown in the 'PM2 Startup Command Output' above manually."
+install_panel() {
+    show_step "Starting Panel Installation"
+    
+    # Get user inputs
+    read -p "Enter panel port [$DEFAULT_PORT]: " port_input
+    read -p "Enter admin username [$DEFAULT_USER]: " user_input
+    read -p "Enter admin password [random]: " pass_input
+    
+    # Set defaults if empty
+    port_input=${port_input:-$DEFAULT_PORT}
+    user_input=${user_input:-$DEFAULT_USER}
+    pass_input=${pass_input:-$(openssl rand -base64 12)}
+    
+    # Check requirements
+    check_requirements
+    
+    # Clone repository
+    if [ -d "$INSTALL_PATH" ]; then
+        show_warning "Removing existing installation..."
+        rm -rf "$INSTALL_PATH"
     fi
+    
+    git clone "$APP_REPO_URL" "$INSTALL_PATH" || {
+        show_error "Failed to clone repository"
+        exit 1
+    }
+    
+    cd "$INSTALL_PATH" || exit
+    
+    # Create environment file
+    create_env_file "$port_input" "$user_input" "$pass_input"
+    
+    # Install dependencies
+    npm install || {
+        show_error "Failed to install dependencies"
+        exit 1
+    }
+    
+    # Build application
+    npm run build || {
+        show_error "Failed to build application"
+        exit 1
+    }
+    
+    # Start with PM2
+    pm2 start npm --name "$APP_DIR_NAME" -- run start || {
+        show_error "Failed to start application"
+        exit 1
+    }
+    
+    pm2 save
+    pm2 startup | grep "sudo env" | bash
+    
+    show_success "Installation completed successfully!"
+    show_credentials
+}
+
+update_panel() {
+    show_step "Updating Panel"
+    
+    if [ ! -d "$INSTALL_PATH" ]; then
+        show_error "Panel not found at $INSTALL_PATH"
+        exit 1
+    fi
+    
+    cd "$INSTALL_PATH" || exit
+    
+    # Backup existing .env
+    cp .env .env.bak
+    
+    git pull origin main || {
+        show_error "Failed to update repository"
+        exit 1
+    }
+    
+    # Restore .env
+    mv .env.bak .env
+    
+    npm install
+    npm run build
+    
+    pm2 restart "$APP_DIR_NAME"
+    
+    show_success "Panel updated successfully!"
+}
+
+uninstall_panel() {
+    show_step "Uninstalling Panel"
+    
+    read -p "Are you sure you want to completely uninstall? [y/N]: " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        show_warning "Uninstallation cancelled"
+        return
+    fi
+    
+    pm2 delete "$APP_DIR_NAME"
+    pm2 save
+    
+    if [ -d "$INSTALL_PATH" ]; then
+        rm -rf "$INSTALL_PATH"
+        show_success "Panel files removed successfully"
+    else
+        show_warning "Panel directory not found"
+    fi
+    
+    show_success "Panel completely uninstalled"
+}
+
+change_settings() {
+    show_step "Changing Settings"
+    
+    if [ ! -f "$INSTALL_PATH/.env" ]; then
+        show_error "No panel installation found"
+        exit 1
+    fi
+    
+    current_port=$(grep "PORT=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    current_user=$(grep "ADMIN_USER=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    
+    read -p "Enter new port [$current_port]: " new_port
+    read -p "Enter new admin username [$current_user]: " new_user
+    read -p "Enter new admin password [keep current]: " new_pass
+    
+    new_port=${new_port:-$current_port}
+    new_user=${new_user:-$current_user}
+    
+    # Update .env file
+    if [ -n "$new_pass" ]; then
+        sed -i "s/ADMIN_PASS=.*/ADMIN_PASS=$new_pass/" "$INSTALL_PATH/.env"
+    fi
+    
+    sed -i "s/PORT=.*/PORT=$new_port/" "$INSTALL_PATH/.env"
+    sed -i "s/ADMIN_USER=.*/ADMIN_USER=$new_user/" "$INSTALL_PATH/.env"
+    
+    pm2 restart "$APP_DIR_NAME"
+    
+    show_success "Settings updated successfully!"
+    show_credentials
+}
+
+show_credentials() {
+    if [ ! -f "$INSTALL_PATH/.env" ]; then
+        show_error "No panel installation found"
+        return
+    fi
+    
+    SERVER_IP=$(grep "REAL_IP=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    PANEL_PORT=$(grep "PORT=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    ADMIN_USER=$(grep "ADMIN_USER=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    ADMIN_PASS=$(grep "ADMIN_PASS=" "$INSTALL_PATH/.env" | cut -d= -f2)
+    
+    echo ""
+    echo -e "${GREEN}=== Panel Access Information ===${NC}"
+    echo -e "URL: ${YELLOW}http://$SERVER_IP:$PANEL_PORT/paneladmin${NC}"
+    echo -e "Username: ${YELLOW}$ADMIN_USER${NC}"
+    echo -e "Password: ${YELLOW}$ADMIN_PASS${NC}"
+    echo -e "${GREEN}=================================${NC}"
+    echo ""
+}
+
+# --- Main Execution ---
+if [[ "$1" == "vpn" ]]; then
+    # Show menu if script is called with "vpn" argument
+    while true; do
+        show_menu
+        read -p "Select option [1-5]: " choice
+        
+        case $choice in
+            1) install_panel ;;
+            2) update_panel ;;
+            3) uninstall_panel ;;
+            4) change_settings ;;
+            5) exit 0 ;;
+            *) show_error "Invalid option" ;;
+        esac
+        
+        read -p "Press Enter to continue..."
+    done
 else
-    echo "⚠️ PM2 startup command did not produce the expected output pattern. You may need to run 'sudo $PM2_CMD startup' manually and follow its instructions."
+    # Run installation directly if no argument
+    install_panel
 fi
-
-
-# --- Nginx Configuration Reminder ---
-show_step "Nginx Reverse Proxy (Recommended Manual Step)"
-NGINX_CONF_EXAMPLE="/etc/nginx/sites-available/protocolpilot"
-echo "Nginx is installed. For production, configure it as a reverse proxy."
-echo "Example Nginx server block (save as $NGINX_CONF_EXAMPLE):"
-echo ""
-echo "server {"
-echo "    listen 80;"
-echo "    server_name your_domain_or_server_ip; # REPLACE THIS"
-echo ""
-echo "    location / {"
-echo "        proxy_pass http://localhost:3000; # Assumes app runs on port 3000"
-echo "        proxy_http_version 1.1;"
-echo "        proxy_set_header Upgrade \$http_upgrade;"
-echo "        proxy_set_header Connection 'upgrade';"
-echo "        proxy_set_header Host \$host;"
-echo "        proxy_cache_bypass \$http_upgrade;"
-echo "    }"
-echo "}"
-echo ""
-echo "After creating the file, enable it: sudo ln -s $NGINX_CONF_EXAMPLE /etc/nginx/sites-enabled/"
-echo "Then test Nginx config: sudo nginx -t"
-echo "And reload Nginx: sudo systemctl reload nginx"
-echo "Consider using Certbot for SSL: sudo apt install certbot python3-certbot-nginx && sudo certbot --nginx"
-
-
-# --- Final Output ---
-echo ""
-echo "✅ ProtocolPilot Installation Completed Successfully!"
-echo "---------------------------------------------------"
-echo ""
-echo "📋 Admin Credentials & Access Information:"
-echo "   ---------------------------------------"
-echo "   🌐 Panel URL: http://$SERVER_IP:3000/paneladmin  (or http://your_domain_or_server_ip/paneladmin if using Nginx)"
-echo "   👤 Username:   $DEFAULT_USER"
-echo "   🔑 Password:   $DEFAULT_PASS  (This was randomly generated. Store it securely!)"
-echo ""
-echo "⚠️ Important Next Steps:"
-echo "   -------------------"
-echo "   1. Access the panel URL in your browser."
-echo "   2. Log in with the username and password provided above."
-echo "   3. IMMEDIATELY go to 'Panel Settings' and change the default admin username and password for security."
-echo "   4. Configure Nginx as a reverse proxy and set up SSL (see Nginx section above or INSTALL_UBUNTU.md)."
-echo ""
-echo "   To check application status: sudo $PM2_CMD list"
-echo "   To view logs: sudo $PM2_CMD logs $APP_DIR_NAME"
-echo ""
-echo "ℹ️ Note on System Metrics & Real Data:"
-echo "   - The panel UI for system metrics (IP, CPU, RAM, Bandwidth) is mostly for display in this prototype."
-echo "   - True real-time data for CPU, RAM, and Bandwidth requires a backend agent or service on the server"
-echo "     that the Next.js application can query. This script does not install such an agent."
-echo "   - The IP address displayed on the login page info and in Panel Settings is derived from 'hostname -I' and set in .env."
-echo "   - User management now starts with an empty list. Users are added via the panel (data stored in mock frontend state)."
-echo ""
-echo "The application is set to run on port 3000 (defined in $INSTALL_PATH/.env)."
-echo "If you change the PORT in .env, you must restart the application using: sudo $PM2_CMD restart $APP_DIR_NAME"
-echo "And update any reverse proxy (e.g., Nginx) configuration."
-
-exit 0
