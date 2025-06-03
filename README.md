@@ -1,4 +1,12 @@
 
+## Install ProtocolPilot
+
+```
+bash <(curl -Ls https://raw.githubusercontent.com/Blacknuno/studio/refs/heads/1.0.0/install.sh)
+```
+
+
+
 # ProtocolPilot: Automated Ubuntu Server Installation Guide
 
 This guide provides steps to deploy the ProtocolPilot Next.js application on an Ubuntu server using an automated installation script. The script is now pre-configured to use a specific application repository: `https://github.com/Blacknuno/studio.git`.
